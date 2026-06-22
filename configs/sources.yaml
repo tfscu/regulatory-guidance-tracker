@@ -1,0 +1,43 @@
+sources:
+  fda:
+    agency: FDA
+    jurisdiction: US
+    base_url: "https://www.fda.gov/regulatory-information/search-fda-guidance-documents"
+    enabled: true
+    strategy: "metadata_table_or_placeholder"
+  ema_open_consultations:
+    agency: EMA
+    jurisdiction: EU
+    base_url: "https://www.ema.europa.eu/en/news-events/open-consultations"
+    enabled: true
+    strategy: "html"
+  ema_scientific_guidelines:
+    agency: EMA
+    jurisdiction: EU
+    base_url: "https://www.ema.europa.eu/en/human-regulatory-overview/research-development/scientific-guidelines"
+    enabled: true
+    strategy: "html"
+  ich_guidelines:
+    agency: ICH
+    jurisdiction: International
+    base_url: "https://www.ich.org/page/search-index-ich-guidelines"
+    enabled: true
+    strategy: "html_or_placeholder"
+  ich_public_consultations:
+    agency: ICH
+    jurisdiction: International
+    base_url: "https://www.ich.org/page/public-consultations"
+    enabled: true
+    strategy: "html_or_placeholder"
+  cde:
+    agency: CDE
+    jurisdiction: China
+    base_url: "https://www.cde.org.cn/"
+    enabled: true
+    strategy: "html"
+  pmda_regulatory_info:
+    agency: PMDA
+    jurisdiction: Japan
+    base_url: "https://www.pmda.go.jp/english/review-services/regulatory-info/0002.html"
+    enabled: true
+    strategy: "html"

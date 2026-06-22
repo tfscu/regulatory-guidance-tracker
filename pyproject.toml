@@ -1,0 +1,29 @@
+[project]
+name = "reg-guidance-tracker"
+version = "0.1.0"
+description = "Web-based regulatory guidance tracker for clinical development and biostatistics."
+requires-python = ">=3.11"
+dependencies = [
+    "beautifulsoup4",
+    "httpx",
+    "pandas",
+    "pydantic",
+    "PyYAML",
+    "sqlmodel",
+    "streamlit",
+    "typer",
+]
+
+[project.scripts]
+guidance-collector = "guidance_collector.fda:main"
+reg-guidance-tracker = "app.cli:app"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*", "guidance_collector*"]
