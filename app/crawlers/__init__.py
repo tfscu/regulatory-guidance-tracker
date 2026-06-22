@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from app.crawlers.base import BaseCrawler, PlaceholderCrawler
+from app.crawlers.cde import CDECrawler
+from app.crawlers.ema import EMACrawler
 from app.crawlers.fda import FDACrawler
+from app.crawlers.ich import ICHCrawler
 
 
 def crawler_for_agency(agency: str) -> BaseCrawler:
@@ -9,11 +12,11 @@ def crawler_for_agency(agency: str) -> BaseCrawler:
     if agency_key == "FDA":
         return FDACrawler()
     if agency_key == "EMA":
-        return PlaceholderCrawler("EMA", "EU")
+        return EMACrawler()
     if agency_key == "ICH":
-        return PlaceholderCrawler("ICH", "International")
+        return ICHCrawler()
     if agency_key == "CDE":
-        return PlaceholderCrawler("CDE", "China")
+        return CDECrawler()
     if agency_key == "PMDA":
         return PlaceholderCrawler("PMDA", "Japan")
     raise ValueError(f"Unsupported agency: {agency}")
@@ -21,4 +24,3 @@ def crawler_for_agency(agency: str) -> BaseCrawler:
 
 def configured_agencies() -> list[str]:
     return ["FDA", "EMA", "ICH", "CDE", "PMDA"]
-

@@ -1,0 +1,57 @@
+from datetime import date
+
+from app.crawlers.ema import EMACrawler, parse_ema_guidance_payload
+
+
+EMA_SAMPLE_PAYLOAD = {
+    "meta": {"total_records": 3, "timestamp": "2026-06-22T06:23:49Z"},
+    "data": [
+        {
+            "title": "Development of new medicinal products for the treatment of smoking - Scientific guideline",
+            "summary": "",
+            "categories": "Human",
+            "first_published_date": "18/12/2008",
+            "last_updated_date": "29/05/2026",
+            "general_url": "https://www.ema.europa.eu/en/development-new-medicinal-products-treatment-smoking-scientific-guideline",
+        },
+        {
+            "title": "Real-world evidence",
+            "summary": "Making greater use of real-world evidence and real-world data can improve decisions.",
+            "categories": "Human;Veterinary",
+            "first_published_date": "24/07/2024",
+            "last_updated_date": "10/06/2026",
+            "general_url": "https://www.ema.europa.eu/en/about-us/how-we-work/data-regulation-big-data-other-sources/real-world-evidence",
+        },
+        {
+            "title": "Languages on this website",
+            "summary": "Corporate page.",
+            "categories": "Corporate",
+            "first_published_date": "17/02/2023",
+            "last_updated_date": "16/06/2026",
+            "general_url": "https://www.ema.europa.eu/en/about-us/about-website/languages-website",
+        },
+    ],
+}
+
+
+def test_parse_ema_guidance_payload_keeps_guidance_rows():
+    documents = parse_ema_guidance_payload(EMA_SAMPLE_PAYLOAD)
+
+    assert len(documents) == 1
+    document = documents[0]
+    assert document.title == "Development of new medicinal products for the treatment of smoking"
+    assert document.agency == "EMA"
+    assert document.jurisdiction == "EU"
+    assert document.status_normalized == "final"
+    assert document.published_date == date(2008, 12, 18)
+    assert document.updated_date == date(2026, 5, 29)
+    assert document.summary == "Not available."
+    assert document.source_page_url.endswith("smoking-scientific-guideline")
+
+
+def test_ema_crawler_uses_injected_fetcher():
+    crawler = EMACrawler(fetch_json=lambda: EMA_SAMPLE_PAYLOAD)
+
+    documents = crawler.crawl()
+
+    assert len(documents) == 1

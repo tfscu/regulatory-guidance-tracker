@@ -45,15 +45,19 @@ def normalize_status(
             return "final", None
 
     if agency_key == "ICH":
-        if "public consultation" in text or "step 2b" in text:
+        if ("public consultation" in text or "step 2b" in text) and (
+            comment_end_date is None or comment_end_date >= date.today()
+        ):
             return "open_for_comment", None
+        if "step 3" in text:
+            return "draft", None
         if "step 4" in text:
             return "final", None
         if "step 5" in text:
             return "implemented", None
 
     if agency_key == "CDE":
-        if "公开征求" in text or "征求意见稿" in text:
+        if "公开征求" in text or "征求意见" in text:
             return "open_for_comment", None
         if "试行" in text:
             return "final", "trial"
@@ -71,4 +75,3 @@ def normalize_status(
     if "final" in text:
         return "final", None
     return "unknown", None
-

@@ -24,6 +24,7 @@ def test_ema_open_consultation_maps_to_open_for_comment():
 
 def test_ich_step_rules():
     assert normalize_status("ICH E20", "Step 2b public consultation", "ICH")[0] == "open_for_comment"
+    assert normalize_status("ICH E20", "Step 3", "ICH")[0] == "draft"
     assert normalize_status("ICH E9", "Step 4", "ICH")[0] == "final"
     assert normalize_status("ICH E6", "Step 5", "ICH")[0] == "implemented"
 
@@ -39,4 +40,3 @@ def test_pmda_guidance_defaults_to_final():
     status, _ = normalize_status("Regulatory information guidance for clinical trials", None, "PMDA")
 
     assert status == "final"
-

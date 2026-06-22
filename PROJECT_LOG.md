@@ -22,3 +22,23 @@ Notes:
 - Repository had no prior commits when this milestone was recorded.
 - `data/` runtime artifacts should not be committed unless explicitly approved.
 - Future milestones should update this file after validation.
+
+## 2026-06-22 - ICH, EMA, and CDE crawler milestone
+
+Status: implemented
+
+Summary:
+- Added app-level ICH crawler using the official ICH efficacy guidelines API.
+- Added app-level EMA crawler using EMA's official guidance and information JSON data file with `?download=1`.
+- Added app-level CDE crawler scaffold with official CDE guidance page fetching, protection-page detection, and reusable parsers for CDE HTML/item payloads.
+- Replaced placeholder registry entries for ICH, EMA, and CDE.
+- Corrected CDE Chinese status normalization rules and added crawler-specific tests.
+
+Validation:
+- `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 40 tests.
+- `python -m unittest discover -s tests -v` passed with 19 unittest tests.
+- Live crawler smoke check: ICH returned 44 records; EMA returned 1101 records; CDE returned 0 records because the official site returned a protection page.
+- CLI crawl saved 44 ICH records and 1101 EMA records to SQLite with `--no-seed-if-empty`; CDE saved 0 records and did not seed demo data.
+
+Notes:
+- CDE live HTML requests currently return a protection page in automated HTTP/headless checks, so the crawler avoids saving false records and returns an empty list with a warning until a stable official data endpoint or browser-export payload is available.
