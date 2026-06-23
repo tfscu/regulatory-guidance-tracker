@@ -63,3 +63,23 @@ Validation:
 
 Notes:
 - CDE detail pages expose attachment links, but the list API does not include attachment `idCODE`; document URL enrichment should be a separate milestone to avoid making this successful list crawl slow and brittle.
+
+## 2026-06-23 - CDE attachment-link enrichment milestone
+
+Status: implemented
+
+Summary:
+- Added CDE detail-page enrichment after the protected browser/AJAX list crawl succeeds.
+- Uses the same Playwright browser context to request each official CDE detail page and extract the first `/zdyz/downloadAtt` attachment link.
+- Stores detected attachment URLs in `document_url` and classifies obvious PDF/DOC/DOCX attachment formats in `document_format`.
+- Keeps CDE records without detected attachments as `Not available.` in the web detail view/export behavior.
+
+Validation:
+- Targeted tests: `python -m pytest tests\test_cde_crawler.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 5 tests.
+- Live CDE crawler smoke check returned 494 CDE records, 490 records with `document_url`, and 403 records classified as PDF.
+- CLI crawl: `python -m app.cli crawl --agency CDE --no-seed-if-empty` saved 494 CDE records.
+- SQLite agency counts after crawl: FDA 2788, EMA 1101, ICH 44, CDE 494; total 4427.
+
+Notes:
+- CDE detail-page enrichment is slower than list-only crawling because it visits hundreds of detail pages.
+- Four CDE records did not expose a detected attachment link during the live smoke check and should remain `Not available.` unless the official page later changes.

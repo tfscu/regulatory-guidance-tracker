@@ -1,6 +1,11 @@
 import pytest
 
-from app.crawlers.cde import CDECrawler, parse_cde_guidance_html, parse_cde_guidance_items
+from app.crawlers.cde import (
+    CDECrawler,
+    extract_cde_attachment_from_html,
+    parse_cde_guidance_html,
+    parse_cde_guidance_items,
+)
 
 
 def test_parse_cde_guidance_items_filters_to_chemical_and_biologics():
@@ -43,6 +48,8 @@ def test_parse_cde_guidance_items_maps_live_api_shape():
                 "fclass": "化学药,生物制品",
                 "title": "关于开发适宜药品包装规格的指导原则",
                 "zdyzIdCODE": "981efd549bda05ee430ec550583776fc",
+                "document_url": "https://www.cde.org.cn/zdyz/downloadAtt?idCODE=3a5b503374b43ba44cb421202781a465",
+                "document_format": "PDF",
             }
         ]
     )
@@ -51,10 +58,27 @@ def test_parse_cde_guidance_items_maps_live_api_shape():
     document = documents[0]
     assert document.published_date.isoformat() == "2026-06-01"
     assert document.source_page_url.endswith("zdyzIdCODE=981efd549bda05ee430ec550583776fc")
-    assert document.document_url is None
+    assert document.document_url.endswith("idCODE=3a5b503374b43ba44cb421202781a465")
+    assert document.document_format == "PDF"
     assert document.status_raw == "颁布"
     assert document.status_normalized == "final"
     assert document.reference_number == "981efd549bda05ee430ec550583776fc"
+
+
+def test_extract_cde_attachment_from_html_returns_download_link():
+    html = """
+    <table>
+      <tr>
+        <td>附件 1</td>
+        <td><a href="/zdyz/downloadAtt?idCODE=abc123">指导原则.pdf</a></td>
+      </tr>
+    </table>
+    """
+
+    document_url, document_format = extract_cde_attachment_from_html(html)
+
+    assert document_url == "https://www.cde.org.cn/zdyz/downloadAtt?idCODE=abc123"
+    assert document_format == "PDF"
 
 
 def test_parse_cde_guidance_html_rejects_protection_page():

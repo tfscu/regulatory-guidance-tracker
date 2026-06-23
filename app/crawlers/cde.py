@@ -140,7 +140,8 @@ def fetch_cde_guidance_items_with_browser() -> list[dict[str, Any]]:
             )
             if not isinstance(items, list):
                 raise ValueError("CDE browser crawler did not return a list")
-            return _dedupe_items([item for item in items if isinstance(item, dict)])
+            deduped_items = _dedupe_items([item for item in items if isinstance(item, dict)])
+            return _enrich_items_with_detail_links(context, deduped_items)
         finally:
             browser.close()
 
@@ -181,6 +182,16 @@ def parse_cde_guidance_items(items: list[dict[str, Any]]) -> list[GuidanceDocume
     return [document for item in items if (document := _item_to_document(item)) is not None]
 
 
+def extract_cde_attachment_from_html(html: str, base_url: str = CDE_BASE_URL) -> tuple[str | None, str | None]:
+    soup = BeautifulSoup(html, "html.parser")
+    link = soup.select_one('a[href*="downloadAtt"]')
+    if link is None or not link.get("href"):
+        return None, None
+    attachment_text = _clean_text(link.get_text(" ", strip=True))
+    attachment_url = urljoin(base_url, link["href"])
+    return attachment_url, _document_format(attachment_url, attachment_text)
+
+
 def _row_to_document(row: Any) -> GuidanceDocument | None:
     cells = [_clean_text(cell.get_text(" ", strip=True)) for cell in row.find_all(["td", "th"])]
     if len(cells) < 2:
@@ -209,10 +220,12 @@ def _item_to_document(item: dict[str, Any]) -> GuidanceDocument | None:
     if product_area and not any(area in product_area for area in CDE_ALLOWED_PRODUCT_AREAS):
         return None
 
+    document_value = _first_value(item, "document_url", "fileUrl", "attachmentUrl")
     return _build_document(
         title=title,
         source_page_url=_item_source_url(item),
-        document_url=_optional_url(_first_value(item, "document_url", "fileUrl", "attachmentUrl")),
+        document_url=_optional_url(document_value),
+        document_format=_first_value(item, "document_format", "fileFormat") or _document_format(document_value),
         published_date=parse_date(_first_value(item, "published_date", "publishDate", "date", "发布日期", "issueDate")),
         updated_date=parse_date(_first_value(item, "updated_date", "updateDate")),
         product_area=product_area or None,
@@ -231,6 +244,7 @@ def _build_document(
     product_area: str | None = None,
     summary: str = "Not available.",
     document_url: str | None = None,
+    document_format: str | None = None,
     status_raw: str | None = None,
     reference_number: str | None = None,
 ) -> GuidanceDocument:
@@ -242,7 +256,7 @@ def _build_document(
         jurisdiction="China",
         source_page_url=source_page_url or CDE_GUIDANCE_URL,
         document_url=document_url,
-        document_format=_document_format(document_url),
+        document_format=document_format or _document_format(document_url),
         published_date=published_date if hasattr(published_date, "year") else parse_date(published_date),
         updated_date=updated_date if hasattr(updated_date, "year") else parse_date(updated_date),
         status_raw=status_raw,
@@ -291,6 +305,25 @@ def _optional_url(value: str) -> str | None:
     return urljoin(CDE_BASE_URL, value)
 
 
+def _enrich_items_with_detail_links(context: Any, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    enriched: list[dict[str, Any]] = []
+    for item in items:
+        copied = dict(item)
+        detail_url = _item_source_url(copied)
+        try:
+            response = context.request.get(detail_url, timeout=30_000)
+            if response.ok:
+                document_url, document_format = extract_cde_attachment_from_html(response.text())
+                if document_url:
+                    copied["document_url"] = document_url
+                if document_format:
+                    copied["document_format"] = document_format
+        except Exception as exc:  # pragma: no cover - best-effort live enrichment
+            logger.warning("CDE detail attachment fetch failed for %s: %s", detail_url, exc)
+        enriched.append(copied)
+    return enriched
+
+
 def _dedupe_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     deduped: list[dict[str, Any]] = []
@@ -319,10 +352,11 @@ def _first_matching_area(values: list[str]) -> str | None:
     return None
 
 
-def _document_format(url: str | None) -> str | None:
-    if not url:
+def _document_format(url: str | None, filename: str | None = None) -> str | None:
+    text = f"{url or ''} {filename or ''}"
+    if not text.strip():
         return None
-    lowered = url.lower()
+    lowered = text.strip().lower()
     if lowered.endswith(".pdf"):
         return "PDF"
     if lowered.endswith((".doc", ".docx")):
