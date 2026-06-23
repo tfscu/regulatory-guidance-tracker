@@ -200,7 +200,7 @@ def _row_to_document(row: Any) -> GuidanceDocument | None:
     if link is None:
         return None
     title = _clean_text(link.get_text(" ", strip=True)) or cells[0]
-    if not title or "指导原则" not in title:
+    if not title:
         return None
     return _build_document(
         title=title,
@@ -213,7 +213,7 @@ def _row_to_document(row: Any) -> GuidanceDocument | None:
 
 def _item_to_document(item: dict[str, Any]) -> GuidanceDocument | None:
     title = _first_value(item, "title", "name", "bt", "noticeTitle", "guideName")
-    if not title or "指导原则" not in title:
+    if not title:
         return None
 
     product_area = _first_value(item, "productArea", "drugType", "scope", "适用范围", "fclass")

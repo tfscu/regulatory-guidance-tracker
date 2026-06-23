@@ -65,6 +65,29 @@ def test_parse_cde_guidance_items_maps_live_api_shape():
     assert document.reference_number == "981efd549bda05ee430ec550583776fc"
 
 
+def test_parse_cde_guidance_items_keeps_guidance_title_without_guidance_suffix():
+    documents = parse_cde_guidance_items(
+        [
+            {
+                "issueDate": "20260520",
+                "nowstate": "颁布",
+                "fclass": "化学药",
+                "title": "化学仿制药生物等效性研究重大缺陷情形",
+                "zdyzIdCODE": "6b02391b10ae8dab7868d00cadd3cce4",
+                "document_url": "https://www.cde.org.cn/zdyz/downloadAtt?idCODE=5f1e928f8d5512eeeca7dbfe6737b727",
+                "document_format": "PDF",
+            }
+        ]
+    )
+
+    assert len(documents) == 1
+    document = documents[0]
+    assert document.title == "化学仿制药生物等效性研究重大缺陷情形"
+    assert document.published_date.isoformat() == "2026-05-20"
+    assert document.source_page_url.endswith("zdyzIdCODE=6b02391b10ae8dab7868d00cadd3cce4")
+    assert document.document_url.endswith("idCODE=5f1e928f8d5512eeeca7dbfe6737b727")
+
+
 def test_extract_cde_attachment_from_html_returns_download_link():
     html = """
     <table>

@@ -83,3 +83,22 @@ Validation:
 Notes:
 - CDE detail-page enrichment is slower than list-only crawling because it visits hundreds of detail pages.
 - Four CDE records did not expose a detected attachment link during the live smoke check and should remain `Not available.` unless the official page later changes.
+
+## 2026-06-23 - CDE complete-list parser fix milestone
+
+Status: implemented
+
+Summary:
+- Fixed CDE parser logic that incorrectly dropped official CDE guidance records when the title did not contain the literal phrase `指导原则`.
+- Kept the requested CDE scope boundary: chemical drugs and biological products from the official CDE guidance list.
+- Confirmed the previously missing record `化学仿制药生物等效性研究重大缺陷情形` is now captured with source page and PDF attachment URL.
+
+Validation:
+- Targeted tests: `python -m pytest tests\test_cde_crawler.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 6 tests.
+- Live CDE crawler smoke check returned 552 CDE records and included `zdyzIdCODE=6b02391b10ae8dab7868d00cadd3cce4`.
+- CLI crawl: `python -m app.cli crawl --agency CDE --no-seed-if-empty` saved 552 CDE records.
+- SQLite verification found 552 CDE records and 1 target hit for `化学仿制药生物等效性研究重大缺陷情形`.
+- Full validation passed: `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 43 tests; `python -m unittest discover -s tests -v` passed with 19 tests.
+
+Notes:
+- The CDE official list endpoint itself returned 552 unique records before parsing; the earlier 494 count was caused by local parser filtering, not by missing browser/API access.
