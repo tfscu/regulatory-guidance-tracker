@@ -34,10 +34,10 @@ EMA_SAMPLE_PAYLOAD = {
 }
 
 
-def test_parse_ema_guidance_payload_keeps_guidance_rows():
+def test_parse_ema_guidance_payload_keeps_all_guidance_information_rows():
     documents = parse_ema_guidance_payload(EMA_SAMPLE_PAYLOAD)
 
-    assert len(documents) == 1
+    assert len(documents) == 3
     document = documents[0]
     assert document.title == "Development of new medicinal products for the treatment of smoking"
     assert document.agency == "EMA"
@@ -47,6 +47,8 @@ def test_parse_ema_guidance_payload_keeps_guidance_rows():
     assert document.updated_date == date(2026, 5, 29)
     assert document.summary == "Not available."
     assert document.source_page_url.endswith("smoking-scientific-guideline")
+    assert documents[1].title == "Real-world evidence"
+    assert documents[2].topic_raw == "Corporate"
 
 
 def test_ema_crawler_uses_injected_fetcher():
@@ -54,7 +56,7 @@ def test_ema_crawler_uses_injected_fetcher():
 
     documents = crawler.crawl()
 
-    assert len(documents) == 1
+    assert len(documents) == 3
 
 
 def test_extract_ema_pdf_url_from_html_returns_document_pdf():

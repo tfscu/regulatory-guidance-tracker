@@ -135,7 +135,7 @@ def extract_ema_pdf_url_from_html(html: str, base_url: str = EMA_BASE_URL) -> st
 def _row_to_document(row: dict[str, Any]) -> GuidanceDocument | None:
     title = _clean_text(row.get("title"))
     url = _clean_text(row.get("general_url"))
-    if not title or not url or not _is_guidance_row(title, url):
+    if not title or not url:
         return None
 
     name, status_raw = _split_title_status(title)
@@ -163,19 +163,6 @@ def _row_to_document(row: dict[str, Any]) -> GuidanceDocument | None:
         reference_number=_clean_text(row.get("reference_number")) or None,
         needs_manual_review=False,
     )
-
-
-def _is_guidance_row(title: str, url: str) -> bool:
-    lowered_title = title.lower()
-    lowered_url = url.lower()
-    return (
-        "scientific guideline" in lowered_title
-        or "guidance" in lowered_title
-        or "guideline" in lowered_title
-        or lowered_url.endswith("-scientific-guideline")
-        or "/scientific-guidelines/" in lowered_url
-    )
-
 
 def _split_title_status(title: str) -> tuple[str, str]:
     for marker, status in (

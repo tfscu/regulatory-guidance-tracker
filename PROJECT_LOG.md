@@ -122,3 +122,22 @@ Validation:
 
 Notes:
 - Some EMA detail-page PDF requests can intermittently fail with SSL EOF or read timeout; those records remain imported with `document_url` empty instead of blocking the whole refresh.
+
+## 2026-06-24 - EMA complete Guidance and information import milestone
+
+Status: implemented
+
+Summary:
+- Changed EMA import semantics from "scientific guideline-like rows only" to the complete official `Guidance and information` JSON dataset.
+- Removed the local `_is_guidance_row` keyword/URL filter that reduced the official JSON from 2046 rows to 1101 rows.
+- Kept completeness as a mechanical validation rule: every JSON row with both `title` and `general_url` is imported, and PDF enrichment cannot drop records.
+
+Validation:
+- Live EMA JSON fetch returned 2046 raw `data` rows; all 2046 had `title` and `general_url`.
+- Parser verification returned 2046 EMA documents from the same payload.
+- CLI refresh: `python -m app.cli clear-agency EMA; python -m app.cli crawl --agency EMA --no-seed-if-empty` deleted 1101 old EMA records and saved 2046 refreshed EMA records.
+- SQLite verification after refresh found 2046 EMA records and 1652 EMA records with `document_url`.
+- Full validation passed: `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 46 tests; `python -m unittest discover -s tests -v` passed with 19 tests.
+
+Notes:
+- The user reported seeing 2069 records in the EMA source; the live fetch from this environment returned 2046 on 2026-06-24. The crawler now imports the complete live JSON payload it receives instead of filtering it down to guideline-like rows.
