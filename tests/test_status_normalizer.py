@@ -32,6 +32,7 @@ def test_ich_step_rules():
 def test_cde_chinese_rules():
     assert normalize_status("关于公开征求疫苗指导原则意见的通知", None, "CDE")[0] == "open_for_comment"
     assert normalize_status("关于发布药物临床试验指导原则的通告", None, "CDE")[0] == "final"
+    assert normalize_status("某指导原则", "颁布", "CDE")[0] == "final"
     assert normalize_status("药物临床试验指导原则（试行）", None, "CDE") == ("final", "trial")
     assert normalize_status("关于废止某指导原则的公告", None, "CDE")[0] == "withdrawn"
 

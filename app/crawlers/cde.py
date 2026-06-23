@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urljoin
 
@@ -22,23 +23,130 @@ CDE_GUIDANCE_URL = (
 )
 CDE_BASE_URL = "https://www.cde.org.cn"
 CDE_ALLOWED_PRODUCT_AREAS = ("化学药", "生物制品")
+DEFAULT_PAGE_SIZE = 100
+EDGE_PATHS = (
+    Path("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"),
+    Path("C:/Program Files/Microsoft/Edge/Application/msedge.exe"),
+)
 
 FetchText = Callable[[], str]
+FetchItems = Callable[[], list[dict[str, Any]]]
 
 
 class CDECrawler(BaseCrawler):
     agency = "CDE"
     jurisdiction = "China"
 
-    def __init__(self, fetch_text: FetchText | None = None) -> None:
+    def __init__(self, fetch_text: FetchText | None = None, fetch_items: FetchItems | None = None) -> None:
         self.fetch_text = fetch_text or fetch_cde_guidance_page
+        self.fetch_items = fetch_items or fetch_cde_guidance_items_with_browser
 
     def crawl(self) -> list[GuidanceDocument]:
         try:
+            items = self.fetch_items()
+            if items:
+                return parse_cde_guidance_items(items)
             return parse_cde_guidance_html(self.fetch_text())
         except (httpx.HTTPError, ValueError) as exc:
             logger.warning("CDE crawler failed: %s", exc)
             return []
+        except ImportError as exc:
+            logger.warning("CDE browser crawler requires playwright: %s", exc)
+            return []
+
+
+def fetch_cde_guidance_items_with_browser() -> list[dict[str, Any]]:
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        launch_kwargs: dict[str, Any] = {
+            "headless": True,
+            "args": [
+                "--disable-blink-features=AutomationControlled",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+            ],
+        }
+        edge_path = _edge_executable_path()
+        if edge_path is not None:
+            launch_kwargs["executable_path"] = str(edge_path)
+
+        browser = playwright.chromium.launch(**launch_kwargs)
+        try:
+            context = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0"
+                ),
+                locale="zh-CN",
+                timezone_id="Asia/Shanghai",
+                viewport={"width": 1365, "height": 900},
+                extra_http_headers={"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"},
+            )
+            context.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
+            page = context.new_page()
+            page.goto(CDE_GUIDANCE_URL, wait_until="networkidle", timeout=90_000)
+            page.wait_for_timeout(1000)
+            items = page.evaluate(
+                """
+                async ({ areas, pageSize }) => {
+                  function post(payload) {
+                    return new Promise((resolve, reject) => {
+                      window.$.ajax({
+                        url: window.getRootPath() + '/getDomesticGuideList',
+                        type: 'post',
+                        data: payload,
+                        success: resolve,
+                        error: xhr => reject(new Error('CDE list request failed: ' + xhr.status))
+                      });
+                    });
+                  }
+
+                  const records = [];
+                  for (const area of areas) {
+                    const first = await post({
+                      pageNum: 1,
+                      pageSize,
+                      searchTitle: '',
+                      zyfl1: area,
+                      zyfl2: '',
+                      issueDate1: '',
+                      issueDate2: ''
+                    });
+                    if (!first || first.code !== 200 || !first.data) {
+                      continue;
+                    }
+                    records.push(...(first.data.records || []));
+                    const pages = Number(first.data.pages || 1);
+                    for (let pageNum = 2; pageNum <= pages; pageNum += 1) {
+                      const next = await post({
+                        pageNum,
+                        pageSize,
+                        searchTitle: '',
+                        zyfl1: area,
+                        zyfl2: '',
+                        issueDate1: '',
+                        issueDate2: ''
+                      });
+                      if (next && next.code === 200 && next.data && Array.isArray(next.data.records)) {
+                        records.push(...next.data.records);
+                      }
+                    }
+                  }
+                  return records;
+                }
+                """,
+                {"areas": list(CDE_ALLOWED_PRODUCT_AREAS), "pageSize": DEFAULT_PAGE_SIZE},
+            )
+            if not isinstance(items, list):
+                raise ValueError("CDE browser crawler did not return a list")
+            return _dedupe_items([item for item in items if isinstance(item, dict)])
+        finally:
+            browser.close()
+
+
+def _edge_executable_path() -> Path | None:
+    return next((path for path in EDGE_PATHS if path.exists()), None)
 
 
 def fetch_cde_guidance_page() -> str:
@@ -97,18 +205,20 @@ def _item_to_document(item: dict[str, Any]) -> GuidanceDocument | None:
     if not title or "指导原则" not in title:
         return None
 
-    product_area = _first_value(item, "productArea", "drugType", "scope", "适用范围")
+    product_area = _first_value(item, "productArea", "drugType", "scope", "适用范围", "fclass")
     if product_area and not any(area in product_area for area in CDE_ALLOWED_PRODUCT_AREAS):
         return None
 
     return _build_document(
         title=title,
-        source_page_url=urljoin(CDE_BASE_URL, _first_value(item, "url", "href", "link", "source_page_url")),
-        document_url=urljoin(CDE_BASE_URL, _first_value(item, "document_url", "fileUrl", "attachmentUrl")),
-        published_date=parse_date(_first_value(item, "published_date", "publishDate", "date", "发布日期")),
+        source_page_url=_item_source_url(item),
+        document_url=_optional_url(_first_value(item, "document_url", "fileUrl", "attachmentUrl")),
+        published_date=parse_date(_first_value(item, "published_date", "publishDate", "date", "发布日期", "issueDate")),
         updated_date=parse_date(_first_value(item, "updated_date", "updateDate")),
         product_area=product_area or None,
         summary=_first_value(item, "summary", "content", "description") or "Not available.",
+        status_raw=_first_value(item, "status", "nowstate", "versionState"),
+        reference_number=_first_value(item, "zdyzIdCODE", "idCODE", "id") or None,
     )
 
 
@@ -121,9 +231,11 @@ def _build_document(
     product_area: str | None = None,
     summary: str = "Not available.",
     document_url: str | None = None,
+    status_raw: str | None = None,
+    reference_number: str | None = None,
 ) -> GuidanceDocument:
     document_url = document_url or None
-    status, sub_status = normalize_status(title, None, "CDE")
+    status, sub_status = normalize_status(title, status_raw, "CDE")
     return GuidanceDocument(
         title=title,
         agency="CDE",
@@ -133,6 +245,7 @@ def _build_document(
         document_format=_document_format(document_url),
         published_date=published_date if hasattr(published_date, "year") else parse_date(published_date),
         updated_date=updated_date if hasattr(updated_date, "year") else parse_date(updated_date),
+        status_raw=status_raw,
         status_normalized=status,
         sub_status=sub_status,
         topic_raw=product_area,
@@ -140,6 +253,7 @@ def _build_document(
         product_area=product_area,
         summary=summary or "Not available.",
         language="ZH",
+        reference_number=reference_number,
         needs_manual_review=False,
     )
 
@@ -159,6 +273,34 @@ def _first_value(item: dict[str, Any], *keys: str) -> str:
         if text:
             return text
     return ""
+
+
+def _item_source_url(item: dict[str, Any]) -> str:
+    explicit_url = _first_value(item, "url", "href", "link", "source_page_url")
+    if explicit_url:
+        return urljoin(CDE_BASE_URL, explicit_url)
+    code = _first_value(item, "zdyzIdCODE", "idCODE", "id")
+    if code:
+        return f"{CDE_BASE_URL}/zdyz/domesticinfopage?zdyzIdCODE={code}"
+    return CDE_GUIDANCE_URL
+
+
+def _optional_url(value: str) -> str | None:
+    if not value:
+        return None
+    return urljoin(CDE_BASE_URL, value)
+
+
+def _dedupe_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    deduped: list[dict[str, Any]] = []
+    for item in items:
+        key = _first_value(item, "zdyzIdCODE", "idCODE", "id") or _first_value(item, "title", "name")
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
 
 
 def _first_parseable_date(values: list[str]):

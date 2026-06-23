@@ -18,6 +18,7 @@ def parse_date(value: Any) -> date | None:
 
     for fmt in (
         "%Y-%m-%d",
+        "%Y%m%d",
         "%m/%d/%Y",
         "%m/%d/%y",
         "%d/%m/%Y",
@@ -32,4 +33,3 @@ def parse_date(value: Any) -> date | None:
         except ValueError:
             continue
     return None
-

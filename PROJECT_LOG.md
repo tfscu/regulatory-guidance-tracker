@@ -42,3 +42,24 @@ Validation:
 
 Notes:
 - CDE live HTML requests currently return a protection page in automated HTTP/headless checks, so the crawler avoids saving false records and returns an empty list with a warning until a stable official data endpoint or browser-export payload is available.
+
+## 2026-06-23 - CDE browser-AJAX crawler milestone
+
+Status: implemented
+
+Summary:
+- Reworked the CDE crawler to use Playwright with local Microsoft Edge so the official CDE page can complete its JavaScript protection flow.
+- Captured and reused the official `/zdyz/getDomesticGuideList` AJAX endpoint from inside the rendered page.
+- Crawls CDE records for `zyfl1=化学药` and `zyfl1=生物制品` with `zyfl2` empty, matching the requested scope: chemical drugs and biological products, all professional categories.
+- Deduplicates overlapping chemical/biologic records by `zdyzIdCODE`.
+- Maps compact CDE dates like `20260601`, CDE `颁布` status, source detail URLs, and `Not available.` summaries/document links where detail enrichment is not yet available.
+- Added `playwright` as a runtime dependency because CDE requires browser execution.
+
+Validation:
+- Targeted tests: `python -m pytest tests\test_cde_crawler.py tests\test_status_normalizer.py tests\test_date_parser.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 12 tests.
+- Live CDE crawler smoke check returned 494 unique CDE records.
+- CLI crawl: `python -m app.cli crawl --agency CDE --no-seed-if-empty` saved 494 CDE records.
+- SQLite agency counts after crawl: FDA 2788, EMA 1101, ICH 44, CDE 494; total 4427.
+
+Notes:
+- CDE detail pages expose attachment links, but the list API does not include attachment `idCODE`; document URL enrichment should be a separate milestone to avoid making this successful list crawl slow and brittle.

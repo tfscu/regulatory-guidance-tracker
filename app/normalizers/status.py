@@ -61,7 +61,7 @@ def normalize_status(
             return "open_for_comment", None
         if "试行" in text:
             return "final", "trial"
-        if "发布" in text or "通告" in text:
+        if "发布" in text or "通告" in text or "颁布" in text:
             return "final", None
 
     if agency_key == "PMDA":
