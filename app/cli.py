@@ -34,6 +34,16 @@ def seed(db_path: Path = DEFAULT_DB_PATH) -> None:
     typer.echo(f"Saved {len(saved)} seed/demo guidance records.")
 
 
+@app.command("clear-agency")
+def clear_agency(
+    agency: str = typer.Argument(..., help="Agency to delete from SQLite, for example EMA."),
+    db_path: Path = DEFAULT_DB_PATH,
+) -> None:
+    repo = GuidanceRepository(db_path)
+    deleted = repo.delete_by_agency(agency)
+    typer.echo(f"Deleted {deleted} {agency.upper()} guidance records.")
+
+
 @app.command()
 def crawl(
     agency: str = typer.Option("all", "--agency", "-a", help="Agency to crawl: all, FDA, EMA, ICH, CDE, PMDA."),

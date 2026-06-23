@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.crawlers.ema import EMACrawler, parse_ema_guidance_payload
+from app.crawlers.ema import EMACrawler, enrich_ema_documents_with_pdf_links, extract_ema_pdf_url_from_html, parse_ema_guidance_payload
 
 
 EMA_SAMPLE_PAYLOAD = {
@@ -55,3 +55,28 @@ def test_ema_crawler_uses_injected_fetcher():
     documents = crawler.crawl()
 
     assert len(documents) == 1
+
+
+def test_extract_ema_pdf_url_from_html_returns_document_pdf():
+    html = """
+    <main>
+      <a href="/en/documents/scientific-guideline/example-guideline_en.pdf">Download PDF</a>
+    </main>
+    """
+
+    assert (
+        extract_ema_pdf_url_from_html(html)
+        == "https://www.ema.europa.eu/en/documents/scientific-guideline/example-guideline_en.pdf"
+    )
+
+
+def test_enrich_ema_documents_with_pdf_links_sets_document_url():
+    documents = parse_ema_guidance_payload(EMA_SAMPLE_PAYLOAD)
+
+    enriched = enrich_ema_documents_with_pdf_links(
+        documents,
+        lambda url: '<a href="/en/documents/scientific-guideline/smoking-guideline_en.pdf">PDF</a>',
+    )
+
+    assert enriched[0].document_url == "https://www.ema.europa.eu/en/documents/scientific-guideline/smoking-guideline_en.pdf"
+    assert enriched[0].document_format == "PDF"

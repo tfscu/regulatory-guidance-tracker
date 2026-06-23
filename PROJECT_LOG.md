@@ -102,3 +102,23 @@ Validation:
 
 Notes:
 - The CDE official list endpoint itself returned 552 unique records before parsing; the earlier 494 count was caused by local parser filtering, not by missing browser/API access.
+
+## 2026-06-23 - EMA JSON refresh and PDF-link enrichment milestone
+
+Status: implemented
+
+Summary:
+- Updated the app-level EMA crawler to use the official `general-json-report_en.json` URL as the primary source, with the previous `?download=1` variant as fallback.
+- Added EMA detail-page enrichment to extract official PDF links from each guidance page into `document_url`.
+- Added bounded concurrent PDF enrichment so the 1101 EMA guidance detail pages can be processed in a practical time.
+- Added a repository/CLI agency-clearing path so old EMA records can be removed before importing refreshed EMA data.
+
+Validation:
+- Live EMA JSON fetch returned 2046 raw rows and parsed 1101 EMA guidance records.
+- Live EMA PDF enrichment returned 1101 EMA guidance records, with 1006 PDF links in the smoke check.
+- CLI refresh: `python -m app.cli clear-agency EMA; python -m app.cli crawl --agency EMA --no-seed-if-empty` deleted 1101 old EMA records and saved 1101 refreshed EMA records.
+- SQLite verification after CLI refresh found 1101 EMA records and 1016 EMA records with `document_url`.
+- Full validation passed: `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 46 tests; `python -m unittest discover -s tests -v` passed with 19 tests.
+
+Notes:
+- Some EMA detail-page PDF requests can intermittently fail with SSL EOF or read timeout; those records remain imported with `document_url` empty instead of blocking the whole refresh.

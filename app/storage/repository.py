@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Iterable
 
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from app.config import DEFAULT_DB_PATH
 from app.storage.db import get_session, init_db
@@ -62,6 +62,15 @@ class GuidanceRepository:
     def list_documents(self) -> list[GuidanceDocument]:
         with get_session(self.db_path) as session:
             return list(session.exec(select(GuidanceDocument)).all())
+
+    def delete_by_agency(self, agency: str) -> int:
+        agency_key = agency.upper()
+        with get_session(self.db_path) as session:
+            documents = list(session.exec(select(GuidanceDocument).where(GuidanceDocument.agency == agency_key)).all())
+            count = len(documents)
+            session.exec(delete(GuidanceDocument).where(GuidanceDocument.agency == agency_key))
+            session.commit()
+            return count
 
     def _save_in_session(self, session: Session, document: GuidanceDocument) -> GuidanceDocument:
         now = datetime.now(UTC)
