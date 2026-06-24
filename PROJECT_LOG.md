@@ -141,3 +141,21 @@ Validation:
 
 Notes:
 - The user reported seeing 2069 records in the EMA source; the live fetch from this environment returned 2046 on 2026-06-24. The crawler now imports the complete live JSON payload it receives instead of filtering it down to guideline-like rows.
+
+## 2026-06-24 - EMA search-count completeness gate milestone
+
+Status: implemented
+
+Summary:
+- Added an EMA search-page count check before refreshing EMA records from the official JSON feed.
+- Parses the official EMA search page for the active `Guidance and information` facet count and compares it against both JSON `meta.total_records` and parsed import count.
+- Stops the EMA crawler when the official search page reports more records than the JSON feed, preventing a partial EMA refresh from being treated as complete.
+
+Validation:
+- Targeted tests: `python -m pytest tests\test_ema_crawler.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 7 tests.
+- Live smoke check found JSON `meta.total_records=2046`, parsed EMA documents `2046`, and EMA search page count `2069`.
+- Live crawler smoke check returned 0 records with an explicit completeness warning instead of importing the partial JSON dataset.
+
+Notes:
+- This milestone does not delete or refresh existing EMA database records.
+- The next EMA milestone should implement a supplemental search-page/index crawler or another authoritative source path to account for the 23-record gap between the JSON feed and the EMA search UI.

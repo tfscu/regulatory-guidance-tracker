@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import re
 from typing import Any, Callable
 from urllib.parse import urljoin
 
@@ -19,10 +20,16 @@ logger = logging.getLogger(__name__)
 
 EMA_GENERAL_JSON_URL = "https://www.ema.europa.eu/en/documents/report/general-json-report_en.json"
 EMA_GENERAL_JSON_FALLBACK_URL = f"{EMA_GENERAL_JSON_URL}?download=1"
+EMA_SEARCH_URL = "https://www.ema.europa.eu/en/search?f%5B0%5D=ema_search_custom_entity_bundle%3A004_ema_guidance_and_info"
 EMA_BASE_URL = "https://www.ema.europa.eu"
 
 FetchJson = Callable[[], dict[str, Any]]
 FetchText = Callable[[str], str]
+FetchCount = Callable[[], int | None]
+
+
+class EMACompletenessError(ValueError):
+    pass
 
 
 class EMACrawler(BaseCrawler):
@@ -33,17 +40,24 @@ class EMACrawler(BaseCrawler):
         self,
         fetch_json: FetchJson | None = None,
         fetch_detail_html: FetchText | None = None,
+        fetch_search_count: FetchCount | None = None,
         pdf_workers: int = 24,
     ) -> None:
         self.fetch_json = fetch_json or fetch_ema_guidance_json
         self.fetch_detail_html = fetch_detail_html if fetch_detail_html is not None else (
             fetch_ema_detail_html if fetch_json is None else None
         )
+        self.fetch_search_count = fetch_search_count if fetch_search_count is not None else (
+            fetch_ema_guidance_search_count if fetch_json is None else None
+        )
         self.pdf_workers = pdf_workers
 
     def crawl(self) -> list[GuidanceDocument]:
         try:
-            documents = parse_ema_guidance_payload(self.fetch_json())
+            payload = self.fetch_json()
+            documents = parse_ema_guidance_payload(payload)
+            if self.fetch_search_count is not None:
+                validate_ema_guidance_completeness(payload, documents, self.fetch_search_count())
             if self.fetch_detail_html is None:
                 return documents
             return enrich_ema_documents_with_pdf_links(documents, self.fetch_detail_html, workers=self.pdf_workers)
@@ -61,6 +75,20 @@ def fetch_ema_guidance_json() -> dict[str, Any]:
             errors.append(exc)
             logger.warning("EMA JSON fetch failed for %s: %s", url, exc)
     raise ValueError(f"EMA JSON fetch failed for all configured URLs: {errors[-1] if errors else 'unknown error'}")
+
+
+def fetch_ema_guidance_search_count() -> int | None:
+    response = httpx.get(
+        EMA_SEARCH_URL,
+        headers={
+            "Accept": "text/html,application/xhtml+xml",
+            "User-Agent": "Mozilla/5.0 reg-guidance-tracker/0.1",
+        },
+        timeout=30,
+        follow_redirects=True,
+    )
+    response.raise_for_status()
+    return parse_ema_guidance_search_count(response.text)
 
 
 def _fetch_ema_guidance_json_url(url: str) -> dict[str, Any]:
@@ -101,6 +129,40 @@ def parse_ema_guidance_payload(payload: dict[str, Any]) -> list[GuidanceDocument
     if not isinstance(data, list):
         raise ValueError("EMA JSON payload does not contain a data list")
     return [document for row in data if isinstance(row, dict) and (document := _row_to_document(row)) is not None]
+
+
+def parse_ema_guidance_search_count(html: str) -> int | None:
+    soup = BeautifulSoup(html, "html.parser")
+    active_facet = soup.select_one(
+        'a.is-active[data-drupal-facet-item-value="004_ema_guidance_and_info"][data-drupal-facet-item-count]'
+    )
+    if active_facet:
+        return _parse_int(active_facet.get("data-drupal-facet-item-count"))
+
+    heading = soup.find(string=re.compile(r"Search results", re.IGNORECASE))
+    if heading:
+        heading_text = heading.parent.get_text(" ", strip=True) if heading.parent else str(heading)
+        match = re.search(r"Search results\s*\(?\s*([\d,]+)\s*\)?", heading_text, re.IGNORECASE)
+        if match:
+            return _parse_int(match.group(1))
+    return None
+
+
+def validate_ema_guidance_completeness(
+    payload: dict[str, Any], documents: list[GuidanceDocument], search_count: int | None
+) -> None:
+    if search_count is None:
+        logger.warning("EMA search result count was not available; imported JSON rows cannot be cross-checked.")
+        return
+
+    json_count = _payload_total_records(payload) or len(documents)
+    if json_count != search_count or len(documents) != search_count:
+        raise EMACompletenessError(
+            "EMA JSON import is incomplete against the EMA search page: "
+            f"search page reports {search_count} Guidance and information records, "
+            f"JSON reports {json_count}, parsed import has {len(documents)}. "
+            "Supplemental search-page crawling is required before refreshing EMA records."
+        )
 
 
 def enrich_ema_documents_with_pdf_links(
@@ -179,6 +241,22 @@ def _consultation_closing_date(value: Any) -> str:
     if " to " not in text:
         return text
     return text.rsplit(" to ", 1)[-1]
+
+
+def _payload_total_records(payload: dict[str, Any]) -> int | None:
+    meta = payload.get("meta")
+    if not isinstance(meta, dict):
+        return None
+    return _parse_int(meta.get("total_records"))
+
+
+def _parse_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    text = str(value).replace(",", "").strip()
+    if not text.isdigit():
+        return None
+    return int(text)
 
 
 def _clean_text(value: Any) -> str:

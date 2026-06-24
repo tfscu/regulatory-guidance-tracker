@@ -1,6 +1,13 @@
 from datetime import date
 
-from app.crawlers.ema import EMACrawler, enrich_ema_documents_with_pdf_links, extract_ema_pdf_url_from_html, parse_ema_guidance_payload
+from app.crawlers.ema import (
+    EMACrawler,
+    enrich_ema_documents_with_pdf_links,
+    extract_ema_pdf_url_from_html,
+    parse_ema_guidance_payload,
+    parse_ema_guidance_search_count,
+    validate_ema_guidance_completeness,
+)
 
 
 EMA_SAMPLE_PAYLOAD = {
@@ -57,6 +64,38 @@ def test_ema_crawler_uses_injected_fetcher():
     documents = crawler.crawl()
 
     assert len(documents) == 3
+
+
+def test_parse_ema_guidance_search_count_from_active_facet():
+    html = """
+    <main>
+      <h2><span>Search results</span> (2069)</h2>
+      <a class="is-active" data-drupal-facet-item-value="004_ema_guidance_and_info" data-drupal-facet-item-count="2069">
+        <span>Guidance and information (2069)</span>
+      </a>
+    </main>
+    """
+
+    assert parse_ema_guidance_search_count(html) == 2069
+
+
+def test_validate_ema_guidance_completeness_rejects_search_json_mismatch():
+    documents = parse_ema_guidance_payload(EMA_SAMPLE_PAYLOAD)
+    payload = {**EMA_SAMPLE_PAYLOAD, "meta": {"total_records": 2046}}
+
+    try:
+        validate_ema_guidance_completeness(payload, documents, 2069)
+    except ValueError as exc:
+        assert "search page reports 2069" in str(exc)
+        assert "JSON reports 2046" in str(exc)
+    else:
+        raise AssertionError("Expected EMA completeness mismatch to fail")
+
+
+def test_ema_crawler_stops_when_search_count_does_not_match_json():
+    crawler = EMACrawler(fetch_json=lambda: EMA_SAMPLE_PAYLOAD, fetch_search_count=lambda: 2069)
+
+    assert crawler.crawl() == []
 
 
 def test_extract_ema_pdf_url_from_html_returns_document_pdf():
