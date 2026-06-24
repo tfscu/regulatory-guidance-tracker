@@ -159,3 +159,26 @@ Validation:
 Notes:
 - This milestone does not delete or refresh existing EMA database records.
 - The next EMA milestone should implement a supplemental search-page/index crawler or another authoritative source path to account for the 23-record gap between the JSON feed and the EMA search UI.
+
+## 2026-06-24 - EMA source mismatch investigation milestone
+
+Status: investigated
+
+Summary:
+- Rechecked EMA's official `Guidance and information JSON data file` from the EMA website data download page.
+- Confirmed the official Guidance JSON endpoint currently returns `meta.total_records=2046` with 2046 data rows.
+- Confirmed the EMA search UI can report `Guidance and information` as 2069 records, creating a 23-record gap against the JSON feed.
+- Confirmed the missing records are not explained by the first visible search results: examples such as `ICH E22 General considerations for patient preference studies` and `Cookies` are already present in the JSON feed.
+
+Validation:
+- Live JSON fetch: `https://www.ema.europa.eu/en/documents/report/general-json-report_en.json` returned 2046 rows with timestamp `2026-06-24T06:21:59Z`.
+- Live search-count fetch returned 2069 for the active `Guidance and information` facet when the search page responded successfully.
+- Direct search pagination URLs such as `page=1` and `page=2` returned EMA 404 pages, including for other content types such as News.
+- Search URLs with additional facet/date/sort parameters also returned EMA 404 pages, so the search UI is not a reliable enumerable source.
+- `https://www.ema.europa.eu/sitemap.xml`, despite being referenced by EMA's `robots.txt`, returned an EMA 404 page from this environment.
+- Cache-busting query parameters on the Guidance JSON endpoint returned EMA 404 pages; the canonical no-query JSON URL remained the only stable Guidance JSON endpoint.
+
+Notes:
+- EMA's website data download page states the JSON files are intended for automated systems and updated twice daily; this remains the preferred data channel.
+- The crawler should continue treating the search page as a completeness alarm rather than as the primary data source.
+- The next practical path is to identify a stable, allowed source for the 23 search-index-only records, or to document that the official automated Guidance JSON feed is currently 2046 while the public search index reports 2069.

@@ -79,6 +79,16 @@ def test_parse_ema_guidance_search_count_from_active_facet():
     assert parse_ema_guidance_search_count(html) == 2069
 
 
+def test_parse_ema_guidance_search_count_from_heading():
+    html = """
+    <main>
+      <h2><span class="results-count">Search results</span> (2,069)</h2>
+    </main>
+    """
+
+    assert parse_ema_guidance_search_count(html) == 2069
+
+
 def test_validate_ema_guidance_completeness_rejects_search_json_mismatch():
     documents = parse_ema_guidance_payload(EMA_SAMPLE_PAYLOAD)
     payload = {**EMA_SAMPLE_PAYLOAD, "meta": {"total_records": 2046}}

@@ -141,7 +141,12 @@ def parse_ema_guidance_search_count(html: str) -> int | None:
 
     heading = soup.find(string=re.compile(r"Search results", re.IGNORECASE))
     if heading:
-        heading_text = heading.parent.get_text(" ", strip=True) if heading.parent else str(heading)
+        heading_container = heading.find_parent(["h1", "h2", "h3"]) if hasattr(heading, "find_parent") else None
+        heading_text = (
+            heading_container.get_text(" ", strip=True)
+            if heading_container
+            else heading.parent.get_text(" ", strip=True) if heading.parent else str(heading)
+        )
         match = re.search(r"Search results\s*\(?\s*([\d,]+)\s*\)?", heading_text, re.IGNORECASE)
         if match:
             return _parse_int(match.group(1))
