@@ -182,3 +182,20 @@ Notes:
 - EMA's website data download page states the JSON files are intended for automated systems and updated twice daily; this remains the preferred data channel.
 - The crawler should continue treating the search page as a completeness alarm rather than as the primary data source.
 - The next practical path is to identify a stable, allowed source for the 23 search-index-only records, or to document that the official automated Guidance JSON feed is currently 2046 while the public search index reports 2069.
+
+## 2026-06-25 - EMA official JSON authority milestone
+
+Status: implemented
+
+Summary:
+- Adopted the user preference that EMA imports should be based on the official website data download JSON file, not on the public EMA search-page count.
+- Changed the default EMA crawler path so it no longer fetches or enforces the EMA search-page `Guidance and information` count.
+- Kept the search-count parser and completeness validator available only as explicit audit utilities, not as default import gates.
+
+Validation:
+- Added a regression test confirming the default EMA crawler does not attach a search-count checker.
+- Targeted tests: `python -m pytest tests\test_ema_crawler.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed.
+
+Notes:
+- The authoritative automated EMA source for this project is `https://www.ema.europa.eu/en/documents/report/general-json-report_en.json`.
+- Search-page counts should not be used to block JSON imports or force supplemental crawling unless the user explicitly changes this policy later.

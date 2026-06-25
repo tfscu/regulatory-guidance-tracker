@@ -47,9 +47,7 @@ class EMACrawler(BaseCrawler):
         self.fetch_detail_html = fetch_detail_html if fetch_detail_html is not None else (
             fetch_ema_detail_html if fetch_json is None else None
         )
-        self.fetch_search_count = fetch_search_count if fetch_search_count is not None else (
-            fetch_ema_guidance_search_count if fetch_json is None else None
-        )
+        self.fetch_search_count = fetch_search_count
         self.pdf_workers = pdf_workers
 
     def crawl(self) -> list[GuidanceDocument]:

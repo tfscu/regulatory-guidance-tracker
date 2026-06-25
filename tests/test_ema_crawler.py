@@ -66,6 +66,12 @@ def test_ema_crawler_uses_injected_fetcher():
     assert len(documents) == 3
 
 
+def test_ema_crawler_does_not_check_search_count_by_default():
+    crawler = EMACrawler(fetch_detail_html=lambda url: "")
+
+    assert crawler.fetch_search_count is None
+
+
 def test_parse_ema_guidance_search_count_from_active_facet():
     html = """
     <main>
