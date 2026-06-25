@@ -36,6 +36,10 @@ Launch the web app:
 streamlit run app/web/streamlit_app.py
 ```
 
+On a fresh checkout or hosted Streamlit deployment, the app automatically copies
+`data_snapshots/regulatory_guidance_snapshot.db` to `data/regulatory_guidance.db`
+when the runtime database does not exist.
+
 Or print the launch instruction:
 
 ```powershell
@@ -57,6 +61,23 @@ python -m app.cli generate-report
 ```
 
 Outputs are written under `data/exports/`.
+
+## Web Deployment
+
+Use GitHub as the code repository and Streamlit Community Cloud as the hosted
+web runtime.
+
+1. Push this repository to GitHub.
+2. In Streamlit Community Cloud, create a new app from the GitHub repository.
+3. Set the main file path to:
+
+```text
+app/web/streamlit_app.py
+```
+
+The committed snapshot at `data_snapshots/regulatory_guidance_snapshot.db`
+provides initial public data for the web app. Do not commit the runtime `data/`
+directory; it contains local SQLite files, exports, logs, and temporary files.
 
 ## Data Model
 

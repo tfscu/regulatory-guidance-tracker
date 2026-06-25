@@ -1,0 +1,9 @@
+beautifulsoup4
+httpx
+pandas
+playwright
+pydantic
+PyYAML
+sqlmodel
+streamlit
+typer

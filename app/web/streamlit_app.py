@@ -12,7 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 import pandas as pd
 import streamlit as st
 
-from app.config import DEFAULT_DB_PATH
+from app.config import DEFAULT_DB_PATH, bootstrap_database_from_snapshot
 from app.storage.repository import GuidanceRepository
 
 
@@ -23,6 +23,7 @@ def main() -> None:
     st.title("Regulatory Guidance Tracker")
     st.caption("ICH, FDA, EMA, CDE, NMPA")
 
+    bootstrap_database_from_snapshot()
     repo = GuidanceRepository(DEFAULT_DB_PATH)
     df = _load_dataframe(repo)
     if df.empty:

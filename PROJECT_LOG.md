@@ -264,3 +264,17 @@ Summary:
 Validation:
 - Dry-run validation: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\update_guidance_database.ps1 -DryRun -Agency EMA` printed the expected update steps without modifying data.
 - Added a focused test confirming the script is path-portable and includes backup/crawl/export/report steps.
+
+## 2026-06-25 - Streamlit deployment snapshot milestone
+
+Status: implemented
+
+Summary:
+- Added a committed SQLite snapshot location at `data_snapshots/regulatory_guidance_snapshot.db` for hosted web deployments.
+- Added startup bootstrap logic so the Streamlit app copies the snapshot into `data/regulatory_guidance.db` only when the runtime database is missing.
+- Added Streamlit deployment configuration and a `requirements.txt` for hosted dependency installation.
+- Documented the GitHub plus Streamlit Community Cloud deployment path in `README.md`.
+
+Validation:
+- Added focused tests for snapshot bootstrap behavior: copy when missing, preserve an existing runtime database.
+- Snapshot source database checked before copying: 5430 records across CDE, EMA, FDA, and ICH.
