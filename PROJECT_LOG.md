@@ -199,3 +199,25 @@ Validation:
 Notes:
 - The authoritative automated EMA source for this project is `https://www.ema.europa.eu/en/documents/report/general-json-report_en.json`.
 - Search-page counts should not be used to block JSON imports or force supplemental crawling unless the user explicitly changes this policy later.
+
+## 2026-06-25 - CDE chemical and biologics completeness confirmation milestone
+
+Status: verified
+
+Summary:
+- Reconfirmed CDE crawler completeness against the official CDE guidance database filters requested by the user.
+- The official CDE API returned 408 records for `适用范围=化学药` and 319 records for `适用范围=生物制品`.
+- These two official filtered result sets contain 175 overlapping guidance records, so the deduplicated union is 552 unique CDE guidance records.
+- The current crawler returns the same 552 unique records because it crawls both filters and deduplicates by `zdyzIdCODE`.
+
+Validation:
+- Live CDE API check: chemical drugs `api_total=408`, fetched 408; biological products `api_total=319`, fetched 319.
+- Live overlap check: raw total 727, duplicate overlap 175, unique union 552.
+- SQLite check: current local database contains 552 CDE records and 548 records with detected attachment URLs.
+- Live crawler check: `CDECrawler().crawl()` returned 552 records with 552 unique reference numbers and 548 detected attachment URLs.
+- Confirmed presence of representative records from both screenshots: `981efd549bda05ee430ec550583776fc` for the first chemical-drug row and `9c92f5cfa79fc44da0ac28d2b3a0f6b3` for the first biological-product row.
+- Reconfirmed the previously missing example `6b02391b10ae8dab7868d00cadd3cce4` is present.
+
+Notes:
+- The expected CDE count for the combined scope is 552 unique records, not 408 + 319 = 727, because some guidance applies to both chemical drugs and biological products.
+- Four CDE records still do not expose a detected attachment URL during detail-page enrichment and should remain without `document_url` unless the official detail pages change.
