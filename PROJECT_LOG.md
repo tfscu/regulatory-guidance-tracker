@@ -278,3 +278,19 @@ Summary:
 Validation:
 - Added focused tests for snapshot bootstrap behavior: copy when missing, preserve an existing runtime database.
 - Snapshot source database checked before copying: 5430 records across CDE, EMA, FDA, and ICH.
+
+## 2026-06-25 - EMA European date parsing fix milestone
+
+Status: implemented
+
+Summary:
+- Identified that EMA official JSON dates use European `DD/MM/YYYY` ordering.
+- Added EMA-specific date parsing so ambiguous EMA dates such as `12/03/2026` are parsed as 12 March 2026, not 3 December 2026.
+- Kept the global date parser unchanged to avoid changing FDA/CDE behavior.
+
+Validation:
+- Added focused regression tests for EMA ambiguous date parsing.
+- Confirmed the current incorrect future-dated EMA records all come from ambiguous official JSON dates.
+- Repaired the local SQLite database and deployment snapshot from the official EMA JSON using EMA-specific date parsing.
+- Confirmed both `data/regulatory_guidance.db` and `data_snapshots/regulatory_guidance_snapshot.db` contain 5430 total records, 2046 EMA records, and 0 records with `published_date` after 2026-06-25.
+- Confirmed representative corrected dates: ADRA project `2026-03-12`, assessment templates `2026-05-08`, and MRL Q&A `2026-04-08`.

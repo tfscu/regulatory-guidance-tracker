@@ -2,6 +2,7 @@ from datetime import date
 
 from app.crawlers.ema import (
     EMACrawler,
+    _parse_ema_date,
     enrich_ema_documents_with_pdf_links,
     extract_ema_pdf_url_from_html,
     parse_ema_guidance_payload,
@@ -70,6 +71,31 @@ def test_ema_crawler_does_not_check_search_count_by_default():
     crawler = EMACrawler(fetch_detail_html=lambda url: "")
 
     assert crawler.fetch_search_count is None
+
+
+def test_parse_ema_date_prefers_european_day_month_order():
+    assert _parse_ema_date("12/03/2026") == date(2026, 3, 12)
+    assert _parse_ema_date("08/05/2026") == date(2026, 5, 8)
+
+
+def test_parse_ema_guidance_payload_does_not_turn_european_dates_into_future_dates():
+    payload = {
+        "meta": {"total_records": 1},
+        "data": [
+            {
+                "title": "Veterinary antibiotics: Dosage review and adjustment (ADRA) project",
+                "summary": "EMA page summary.",
+                "categories": "Veterinary",
+                "first_published_date": "12/03/2026",
+                "last_updated_date": "",
+                "general_url": "https://www.ema.europa.eu/en/example",
+            }
+        ],
+    }
+
+    documents = parse_ema_guidance_payload(payload)
+
+    assert documents[0].published_date == date(2026, 3, 12)
 
 
 def test_parse_ema_guidance_search_count_from_active_facet():

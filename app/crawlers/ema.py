@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date, datetime
 import logging
 import re
 from typing import Any, Callable
@@ -215,9 +216,9 @@ def _row_to_document(row: dict[str, Any]) -> GuidanceDocument | None:
         source_page_url=url,
         document_url=None,
         document_format=None,
-        published_date=parse_date(row.get("first_published_date")),
-        updated_date=parse_date(row.get("last_updated_date")),
-        comment_end_date=parse_date(_consultation_closing_date(row.get("consultation_date"))),
+        published_date=_parse_ema_date(row.get("first_published_date")),
+        updated_date=_parse_ema_date(row.get("last_updated_date")),
+        comment_end_date=_parse_ema_date(_consultation_closing_date(row.get("consultation_date"))),
         status_raw=status_raw,
         status_normalized=status,
         sub_status=sub_status,
@@ -251,6 +252,22 @@ def _payload_total_records(payload: dict[str, Any]) -> int | None:
     if not isinstance(meta, dict):
         return None
     return _parse_int(meta.get("total_records"))
+
+
+def _parse_ema_date(value: Any) -> date | None:
+    if isinstance(value, date):
+        return parse_date(value)
+
+    text = _clean_text(value)
+    if not text:
+        return None
+
+    for fmt in ("%d/%m/%Y", "%d/%m/%y"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return parse_date(text)
 
 
 def _parse_int(value: Any) -> int | None:
