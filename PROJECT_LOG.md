@@ -250,3 +250,17 @@ Validation:
 - Added a focused test confirming title-only search does not match summary-only text.
 - Targeted test: `python -m pytest tests\test_streamlit_app.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 2 tests.
 - Full test suite: `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 53 tests.
+
+## 2026-06-25 - Portable update script milestone
+
+Status: implemented
+
+Summary:
+- Added `scripts/update_guidance_database.ps1` as a portable guidance database update script.
+- The script resolves the repository root from its own location, so it does not depend on `C:\Users\ET` or any single-machine checkout path.
+- The script can initialize the database, optionally install dependencies, back up the SQLite database, crawl guidance records, export CSV, generate the Markdown report, and write a transcript log.
+- Added `scripts/README.md` with first-run and regular-run instructions.
+
+Validation:
+- Dry-run validation: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\update_guidance_database.ps1 -DryRun -Agency EMA` printed the expected update steps without modifying data.
+- Added a focused test confirming the script is path-portable and includes backup/crawl/export/report steps.
