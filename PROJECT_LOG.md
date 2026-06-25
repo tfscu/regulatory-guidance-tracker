@@ -236,3 +236,17 @@ Validation:
 - Targeted test: `python -m pytest tests\test_streamlit_app.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed.
 - Full test suite: `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 52 tests.
 - Local data check found 5430 loaded rows and 4475 rows with non-empty `document_url` values available for the final PDF column.
+
+## 2026-06-25 - Streamlit sidebar search order milestone
+
+Status: implemented
+
+Summary:
+- Moved `Published date range` to the bottom of the Streamlit sidebar filters.
+- Added a separate `Title search` input directly below `Keyword search`.
+- Kept `Keyword search` as broad search across title, summary, topic, and agency, while `Title search` filters only the title column.
+
+Validation:
+- Added a focused test confirming title-only search does not match summary-only text.
+- Targeted test: `python -m pytest tests\test_streamlit_app.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 2 tests.
+- Full test suite: `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 53 tests.

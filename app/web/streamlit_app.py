@@ -74,6 +74,18 @@ def _sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     if topic:
         filtered = filtered[filtered["topic_normalized"].isin(topic)]
 
+    keyword = st.sidebar.text_input("Keyword search")
+    if keyword:
+        filtered = _filter_by_text(
+            filtered,
+            ["title", "summary", "topic_normalized", "agency"],
+            keyword,
+        )
+
+    title_query = st.sidebar.text_input("Title search")
+    if title_query:
+        filtered = _filter_by_text(filtered, ["title"], title_query)
+
     min_date, max_date = _date_bounds(df)
     if min_date and max_date:
         selected_range = st.sidebar.date_input("Published date range", value=(min_date, max_date))
@@ -84,21 +96,15 @@ def _sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
                 | ((filtered["published_date"] >= start) & (filtered["published_date"] <= end))
             ]
 
-    keyword = st.sidebar.text_input("Keyword search")
-    if keyword:
-        query = keyword.lower()
-        corpus = (
-            filtered["title"].fillna("")
-            + " "
-            + filtered["summary"].fillna("")
-            + " "
-            + filtered["topic_normalized"].fillna("")
-            + " "
-            + filtered["agency"].fillna("")
-        ).str.lower()
-        filtered = filtered[corpus.str.contains(query, regex=False)]
-
     return filtered
+
+
+def _filter_by_text(df: pd.DataFrame, columns: list[str], query: str) -> pd.DataFrame:
+    lowered_query = query.lower()
+    corpus = pd.Series("", index=df.index)
+    for column in columns:
+        corpus = corpus + " " + df[column].fillna("").astype(str)
+    return df[corpus.str.lower().str.contains(lowered_query, regex=False)]
 
 
 def _date_bounds(df: pd.DataFrame) -> tuple[date | None, date | None]:
