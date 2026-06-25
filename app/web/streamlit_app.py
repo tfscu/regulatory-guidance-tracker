@@ -118,17 +118,22 @@ def _metrics(df: pd.DataFrame) -> None:
 
 def _table(df: pd.DataFrame) -> int:
     st.subheader("Guidance documents")
+    table_df = df.assign(
+        status_display=df["status_normalized"].map(_humanize_label),
+        topic_display=df["topic_normalized"].map(_humanize_label),
+    )
     columns = [
         "title",
         "agency",
-        "status_normalized",
+        "status_display",
         "published_date",
         "updated_date",
-        "topic_normalized",
+        "topic_display",
         "source_page_url",
+        "document_url",
     ]
     event = st.dataframe(
-        df[columns],
+        table_df[columns],
         use_container_width=True,
         hide_index=True,
         key="guidance_documents_table",
@@ -137,11 +142,12 @@ def _table(df: pd.DataFrame) -> int:
         column_config={
             "title": st.column_config.TextColumn("Title"),
             "agency": st.column_config.TextColumn("Agency"),
-            "status_normalized": st.column_config.TextColumn("Status"),
+            "status_display": st.column_config.TextColumn("Status"),
             "published_date": st.column_config.DateColumn("Published date"),
             "updated_date": st.column_config.DateColumn("Updated date"),
-            "topic_normalized": st.column_config.TextColumn("Topic"),
+            "topic_display": st.column_config.TextColumn("Topic"),
             "source_page_url": st.column_config.LinkColumn("Source page"),
+            "document_url": st.column_config.LinkColumn("PDF"),
         },
     )
     selected_rows = getattr(getattr(event, "selection", None), "rows", [])
@@ -174,6 +180,29 @@ def _display_value(value: object) -> str:
     if pd.isna(value) or not str(value).strip():
         return "Not available."
     return str(value)
+
+
+def _humanize_label(value: object) -> str:
+    text = _display_value(value)
+    if text == "Not available.":
+        return text
+    phrases = {"open_for_comment": "Open for comment"}
+    if text in phrases:
+        return phrases[text]
+    acronyms = {"CMC", "FDA", "EMA", "ICH", "CDE", "NMPA", "PMDA", "RWE", "RWD", "MIDD"}
+    small_words = {"and", "for", "in", "of", "on", "or", "the", "to", "with"}
+    words = text.replace("_", " ").split()
+    formatted = []
+    for index, word in enumerate(words):
+        upper = word.upper()
+        lower = word.lower()
+        if upper in acronyms:
+            formatted.append(upper)
+        elif index > 0 and lower in small_words:
+            formatted.append(lower)
+        else:
+            formatted.append(lower.capitalize())
+    return " ".join(formatted)
 
 
 def _clean_url(value: object) -> str:

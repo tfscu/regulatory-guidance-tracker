@@ -221,3 +221,18 @@ Validation:
 Notes:
 - The expected CDE count for the combined scope is 552 unique records, not 408 + 319 = 727, because some guidance applies to both chemical drugs and biological products.
 - Four CDE records still do not expose a detected attachment URL during detail-page enrichment and should remain without `document_url` unless the official detail pages change.
+
+## 2026-06-25 - Streamlit table PDF link and label polish milestone
+
+Status: implemented
+
+Summary:
+- Added the document/PDF URL as the final column in the Streamlit guidance table.
+- Changed table-only Status and Topic display values from normalized machine labels to readable labels, for example `draft` -> `Draft`, `open_for_comment` -> `Open for comment`, and `CMC_quality` -> `CMC Quality`.
+- Kept filtering and detail view behavior based on the underlying normalized fields.
+
+Validation:
+- Added a focused Streamlit display-helper test for status/topic label formatting.
+- Targeted test: `python -m pytest tests\test_streamlit_app.py -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed.
+- Full test suite: `python -m pytest -q --basetemp data\pytest_tmp_verify -p no:cacheprovider` passed with 52 tests.
+- Local data check found 5430 loaded rows and 4475 rows with non-empty `document_url` values available for the final PDF column.
