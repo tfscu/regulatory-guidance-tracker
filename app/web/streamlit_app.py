@@ -21,7 +21,7 @@ st.set_page_config(page_title="Regulatory Guidance Tracker", layout="wide")
 
 def main() -> None:
     st.title("Regulatory Guidance Tracker")
-    st.caption("ICH, FDA, EMA, CDE, NMPA")
+    st.caption("ICH, FDA, EMA, CDE")
 
     bootstrap_database_from_snapshot()
     repo = GuidanceRepository(DEFAULT_DB_PATH)

@@ -294,3 +294,13 @@ Validation:
 - Repaired the local SQLite database and deployment snapshot from the official EMA JSON using EMA-specific date parsing.
 - Confirmed both `data/regulatory_guidance.db` and `data_snapshots/regulatory_guidance_snapshot.db` contain 5430 total records, 2046 EMA records, and 0 records with `published_date` after 2026-06-25.
 - Confirmed representative corrected dates: ADRA project `2026-03-12`, assessment templates `2026-05-08`, and MRL Q&A `2026-04-08`.
+
+## 2026-06-30 - Streamlit title caption cleanup milestone
+
+Status: implemented
+
+Summary:
+- Removed `NMPA` from the Streamlit page caption under `Regulatory Guidance Tracker`.
+
+Validation:
+- Confirmed the visible caption is now `ICH, FDA, EMA, CDE`.
