@@ -342,3 +342,15 @@ Validation:
 Notes:
 - FDA detail-summary enrichment produced many `401 Unauthorized` warnings for detail pages, but FDA table/list records were imported and upserted successfully.
 - EMA detail-page PDF enrichment produced a small number of timeout, connection-reset, and one 404 warning; the official EMA JSON import completed successfully.
+
+## 2026-07-03 - README local run guide milestone
+
+Status: implemented
+
+Summary:
+- Rewrote `README.md` around local reproducibility for new users.
+- Documented two supported local paths: run immediately from the committed SQLite snapshot or refresh the database by crawling official sources.
+- Added setup, troubleshooting, update strategy, data source, testing, Streamlit Cloud, and repository layout sections.
+
+Validation:
+- Confirmed the README references the current committed snapshot path, update script, Streamlit entry point, and current refreshed snapshot counts.

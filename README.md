@@ -1,227 +1,241 @@
 # Regulatory Guidance Tracker
 
-Small internal web application for tracking regulatory guidance metadata across FDA, EMA, ICH, CDE/NMPA, and PMDA sources.
+A local Streamlit web app for browsing regulatory guidance records from FDA, EMA, ICH, and CDE.
 
-The current MVP focuses on a runnable Streamlit dashboard, SQLite persistence, deterministic status/topic tagging, seed/demo data, CSV export, and Markdown update reporting. It keeps the existing `guidance_collector` FDA/EMA utilities intact and adds a new `app/` package for the web product.
+The app uses SQLite for storage and ships with a public database snapshot, so a new user can clone or download this repository and run the dashboard locally without crawling websites first.
 
-## Setup
+## What You Get
+
+- Streamlit dashboard with agency, status, topic, keyword, title, and date filters
+- SQLite database model for guidance metadata
+- Current public database snapshot at `data_snapshots/regulatory_guidance_snapshot.db`
+- Optional crawler/update workflow for FDA, EMA, ICH, and CDE
+- CSV and Markdown exports under `data/exports/`
+
+Current snapshot contents:
+
+| Agency | Records |
+| --- | ---: |
+| FDA | 2791 |
+| EMA | 2047 |
+| CDE | 552 |
+| ICH | 44 |
+| Total | 5434 |
+
+## Requirements
+
+- Python 3.11 or newer
+- Git, if cloning instead of downloading a ZIP
+- PowerShell, if using the provided update script
+
+## Quick Start: Use the Included Database
+
+This is the easiest path. It uses the database snapshot already included in this repository.
 
 ```powershell
-pip install -e ".[test]"
-```
-
-## Quick Start
-
-Initialize the SQLite database:
-
-```powershell
-python -m app.cli init-db
-```
-
-Load seed/demo records so the app is immediately usable:
-
-```powershell
-python -m app.cli seed
-```
-
-Run the MVP crawler pipeline. FDA uses a real metadata endpoint; EMA, ICH, CDE, and PMDA are placeholders in this first version and get seed/demo records when empty.
-
-```powershell
-python -m app.cli crawl --agency all
-```
-
-Launch the web app:
-
-```powershell
+git clone https://github.com/tfscu/regulatory-guidance-tracker.git
+cd regulatory-guidance-tracker
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 streamlit run app/web/streamlit_app.py
 ```
 
-On a fresh checkout or hosted Streamlit deployment, the app automatically copies
-`data_snapshots/regulatory_guidance_snapshot.db` to `data/regulatory_guidance.db`
-when the runtime database does not exist.
-
-Or print the launch instruction:
-
-```powershell
-python -m app.cli run-web
-```
-
-## Export and Report
-
-Export the SQLite records to CSV:
-
-```powershell
-python -m app.cli export-csv
-```
-
-Generate a deterministic Markdown update report:
-
-```powershell
-python -m app.cli generate-report
-```
-
-Outputs are written under `data/exports/`.
-
-## Web Deployment
-
-Use GitHub as the code repository and Streamlit Community Cloud as the hosted
-web runtime.
-
-1. Push this repository to GitHub.
-2. In Streamlit Community Cloud, create a new app from the GitHub repository.
-3. Set the main file path to:
+Open the local URL printed by Streamlit, usually:
 
 ```text
-app/web/streamlit_app.py
+http://localhost:8501
 ```
 
-The committed snapshot at `data_snapshots/regulatory_guidance_snapshot.db`
-provides initial public data for the web app. Do not commit the runtime `data/`
-directory; it contains local SQLite files, exports, logs, and temporary files.
+On first launch, if `data/regulatory_guidance.db` does not exist, the app automatically copies:
 
-## Data Model
+```text
+data_snapshots/regulatory_guidance_snapshot.db
+```
 
-The MVP stores `GuidanceDocument` records in `data/regulatory_guidance.db` with fields for agency, jurisdiction, title, source/document URLs, publication/update/comment dates, raw and normalized status, topic tags, summary, language, reference number, first/last seen timestamps, change type, and manual-review flag.
+to:
 
-Allowed normalized statuses:
+```text
+data/regulatory_guidance.db
+```
 
-- `draft`
-- `final`
-- `open_for_comment`
-- `implemented`
-- `withdrawn`
-- `superseded`
-- `unknown`
+The `data/` directory is local runtime data. It is intentionally not committed to Git.
 
-Allowed change types:
+## If You Download a ZIP Instead of Cloning
 
-- `new`
-- `updated`
-- `unchanged`
-- `removed`
-- `unknown`
+1. Download and unzip the repository.
+2. Open a terminal in the unzipped folder.
+3. Run the same setup commands starting from `python -m venv .venv`.
 
-## Crawlers
+The included snapshot works the same way.
 
-- `FDA`: implemented as the first real MVP crawler, reusing the official FDA guidance DataTables endpoint from the existing collector.
-- `EMA`, `ICH`, `CDE`, `PMDA`: clean placeholders that return no records and log that the crawler is not yet implemented.
-- `seed`: provides clearly marked seed/demo records covering all agencies and priority topics so the dashboard can be demonstrated without live crawling.
+## Refresh the Database Yourself
 
-To add a new agency crawler:
+Use this path if you want to crawl the official websites again and update the local SQLite database.
 
-1. Create a class in `app/crawlers/` that implements `BaseCrawler.crawl()`.
-2. Return `GuidanceDocument` objects.
-3. Normalize status and topic with `app.normalizers.status` and `app.normalizers.topics`.
-4. Register it in `app/crawlers/__init__.py`.
-5. Add focused tests for parsing and normalization behavior.
-
-## Tests
-
-Run the existing collector tests:
+First install the project and Playwright browser dependency:
 
 ```powershell
-python -m unittest discover -s tests -v
+python -m pip install -e .
+python -m playwright install chromium
 ```
 
-Run the MVP pytest suite:
+Then run the update script:
 
 ```powershell
-python -m pytest -q
+powershell -ExecutionPolicy Bypass -File scripts\update_guidance_database.ps1
 ```
 
-## Known Limitations
+The script will:
 
-- First version does not fully crawl every official website.
-- Placeholder crawlers are intentionally non-fatal.
-- No PDF downloading, PDF parsing, authentication, Docker, or LLM API calls.
-- Source websites may change structure or block automated requests; seed/demo records keep the app runnable when live crawling fails.
+- back up the current SQLite database to `data/backups/`
+- crawl all supported agencies
+- upsert records into `data/regulatory_guidance.db`
+- export `data/exports/regulatory_guidance.csv`
+- generate `data/exports/regulatory_update_report.md`
+- write a run log under `data/logs/`
 
-## Future Roadmap
-
-- Replace placeholder crawlers one agency at a time.
-- Add richer source-specific parsing for EMA open consultations, CDE listings, PMDA regulatory pages, and ICH consultations.
-- Add optional PDF metadata extraction behind a separate interface.
-- Add authentication only if the app is deployed beyond a trusted internal environment.
-
-## Legacy FDA Collection
-
-The original CSV/static-report collector is still available. Run a capped FDA smoke test:
+To update only one agency:
 
 ```powershell
-python -m guidance_collector.fda --max-records 20 --output exports/fda_guidance.csv
+powershell -ExecutionPolicy Bypass -File scripts\update_guidance_database.ps1 -Agency EMA
 ```
 
-Run the full FDA export:
+Supported values are:
+
+```text
+all, FDA, EMA, ICH, CDE
+```
+
+To preview the steps without changing files:
 
 ```powershell
-python -m guidance_collector.fda --output exports/fda_guidance.csv
+powershell -ExecutionPolicy Bypass -File scripts\update_guidance_database.ps1 -DryRun
 ```
 
-By default, the legacy FDA collector enriches the `Summary` column from each FDA guidance detail page. Use `--skip-detail-summaries` for a faster table-only export.
+## Update Strategy
 
-If FDA blocks direct scripted access with a timeout, closed connection, `503`, or non-JSON response, use the official browser table instead:
+The crawler does not only look for new records. It fetches the full official list for each supported agency and upserts into SQLite:
 
-1. Open https://www.fda.gov/regulatory-information/search-fda-guidance-documents in Chrome or Edge.
-2. In the table's "Show entries" control, choose `All`.
-3. Open Developer Tools, then the Console tab.
-4. Paste the contents of `tools/fda_browser_export.js` and press Enter.
-5. Wait for the console message that all detail-page summaries have been collected. For the full FDA table this can take several minutes.
-6. Move the downloaded `fda_guidance.csv` to `exports/fda_guidance.csv`.
-7. Regenerate the report:
+- new records become `new`
+- changed records become `updated`
+- unchanged records become `unchanged`
+- `first_seen_at` is preserved
+- `last_seen_at` is refreshed
 
-```powershell
-python -m guidance_collector.report --input exports/fda_guidance.csv --output reports/fda_guidance.html
-```
+The app shows a `Data refresh status` table so users can see when each agency was last crawled or imported.
 
-Export JSON instead:
+## Data Sources
 
-```powershell
-python -m guidance_collector.fda --format json --output exports/fda_guidance.json
-```
+- FDA: official FDA guidance table endpoint and guidance pages
+- EMA: official JSON data file documented by EMA
+- ICH: official ICH API used by the ICH website
+- CDE: official CDE guidance database filters for chemical drugs and biological products
 
-Render the CSV as an HTML report:
-
-```powershell
-python -m guidance_collector.report --input exports/fda_guidance.csv --output reports/fda_guidance.html
-```
-
-## EMA Collection
-
-Run the EMA scientific-guideline export:
-
-```powershell
-python -m guidance_collector.ema --output exports/ema_guidance.csv
-```
-
-EMA's source is the official JSON data file documented by EMA for automated systems:
+EMA source used by this project:
 
 ```text
 https://www.ema.europa.eu/en/documents/report/general-json-report_en.json
 ```
 
-## Combined FDA + EMA Report
+## Common Commands
 
-Render both authorities together:
+Initialize an empty SQLite schema:
 
 ```powershell
-python -m guidance_collector.report --input exports/fda_guidance.csv --input exports/ema_guidance.csv --output reports/guidance_dashboard.html
+python -m app.cli init-db
 ```
 
-## Export Columns
+Run crawler manually:
 
-- Health Authority
-- Guidance Name
-- Summary
-- Issue Date
-- FDA Organization
-- Topic
-- Guidance Status
-- Open for Comment
-- Comment Closing Date on Draft
-- Guidance PDF Link
-- Guidance Page Link
-- Docket Number
+```powershell
+python -m app.cli crawl --agency all --all-records --no-seed-if-empty
+```
+
+Export CSV:
+
+```powershell
+python -m app.cli export-csv
+```
+
+Generate Markdown report:
+
+```powershell
+python -m app.cli generate-report
+```
+
+Print web launch command:
+
+```powershell
+python -m app.cli run-web
+```
+
+## Troubleshooting
+
+If the dashboard has no records, delete the local runtime database and restart the app:
+
+```powershell
+Remove-Item data\regulatory_guidance.db
+streamlit run app/web/streamlit_app.py
+```
+
+The app will copy the included snapshot again.
+
+If crawling fails, check:
+
+- your internet connection
+- whether the source website is temporarily blocking automated requests
+- the log file under `data/logs/`
+- the database backup under `data/backups/`
+
+FDA detail pages may return `401 Unauthorized` for some summary enrichment requests. The FDA list records can still be imported from the table endpoint.
+
+## Tests
+
+Install test dependencies:
+
+```powershell
+python -m pip install -e ".[test]"
+```
+
+Run pytest:
+
+```powershell
+python -m pytest tests -q --basetemp data\pytest_tmp_readme -p no:cacheprovider
+```
+
+Run the legacy unittest baseline:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+## Streamlit Community Cloud
+
+This repository can also be deployed on Streamlit Community Cloud.
+
+Use:
+
+```text
+Main file path: app/web/streamlit_app.py
+```
+
+The hosted app uses `data_snapshots/regulatory_guidance_snapshot.db` as its initial database. To update hosted data, refresh the local database, update the snapshot, commit, and push to GitHub.
+
+## Repository Layout
+
+```text
+app/                         Streamlit app, CLI, crawlers, storage, reports
+configs/                     Source configuration
+data_snapshots/              Committed SQLite snapshot for local/hosted startup
+guidance_collector/          Legacy FDA/EMA collector utilities
+scripts/                     Portable database update script
+tests/                       Pytest and unittest coverage
+```
 
 ## Notes
 
-The FDA page exposes its table via `https://www.fda.gov/datatables-json/search-for-guidance.json`. Some networks may block direct command-line access to FDA; if that happens, retry from a network/browser environment that can access FDA.gov.
+- The committed snapshot contains public regulatory guidance metadata only.
+- The runtime `data/` directory can contain local databases, backups, exports, and logs. Keep it local.
+- PMDA is not included in the current automated update workflow.
