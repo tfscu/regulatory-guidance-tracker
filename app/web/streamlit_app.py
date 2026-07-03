@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 import sys
 
@@ -32,6 +32,7 @@ def main() -> None:
 
     filtered = _sidebar_filters(df).reset_index(drop=True)
     _metrics(filtered)
+    _refresh_status(df)
     selected_row = _table(filtered)
     _detail_view(filtered, selected_row)
 
@@ -54,6 +55,7 @@ def _load_dataframe(repo: GuidanceRepository) -> pd.DataFrame:
                 "source_page_url": doc.source_page_url,
                 "change_type": doc.change_type,
                 "needs_manual_review": doc.needs_manual_review,
+                "last_seen_at": doc.last_seen_at,
             }
         )
     return pd.DataFrame(rows)
@@ -121,6 +123,59 @@ def _metrics(df: pd.DataFrame) -> None:
     final.metric("Final documents", int((df["status_normalized"] == "final").sum()))
     draft.metric("Draft documents", int((df["status_normalized"] == "draft").sum()))
     open_comment.metric("Open for comment", int((df["status_normalized"] == "open_for_comment").sum()))
+
+
+def _refresh_status(df: pd.DataFrame) -> None:
+    status = _refresh_status_table(df)
+    if status.empty:
+        return
+    st.caption("Data refresh status")
+    st.dataframe(
+        status,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Agency": st.column_config.TextColumn("Agency"),
+            "Records": st.column_config.NumberColumn("Records"),
+            "Last crawled (UTC)": st.column_config.TextColumn("Last crawled (UTC)"),
+        },
+    )
+
+
+def _refresh_status_table(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "last_seen_at" not in df.columns:
+        return pd.DataFrame(columns=["Agency", "Records", "Last crawled (UTC)"])
+
+    rows = []
+    for agency, group in df.groupby("agency", dropna=True):
+        seen_values = [_parse_datetime(value) for value in group["last_seen_at"].dropna()]
+        last_seen = max((value for value in seen_values if value is not None), default=None)
+        rows.append(
+            {
+                "Agency": agency,
+                "Records": len(group),
+                "Last crawled (UTC)": _format_refresh_time(last_seen),
+            }
+        )
+    return pd.DataFrame(rows).sort_values("Agency").reset_index(drop=True)
+
+
+def _parse_datetime(value: object) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _format_refresh_time(value: datetime | None) -> str:
+    if value is None:
+        return "Not available."
+    return value.strftime("%Y-%m-%d %H:%M UTC")
 
 
 def _table(df: pd.DataFrame) -> int:

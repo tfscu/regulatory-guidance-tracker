@@ -304,3 +304,17 @@ Summary:
 
 Validation:
 - Confirmed the visible caption is now `ICH, FDA, EMA, CDE`.
+
+## 2026-07-03 - Streamlit data refresh status milestone
+
+Status: implemented
+
+Summary:
+- Added a Streamlit `Data refresh status` table showing each agency, total record count, and latest `last_seen_at` timestamp in UTC.
+- Included `last_seen_at` in the web dataframe so users can see when each agency's guidance records were last crawled or imported.
+
+Validation:
+- Added a focused test confirming refresh status is grouped by agency and uses the latest `last_seen_at`.
+- Targeted test: `python -m pytest tests\test_streamlit_app.py -q --basetemp data\pytest_tmp_refresh_status -p no:cacheprovider` passed with 3 tests.
+- Full test suite: `python -m pytest tests -q --basetemp data\pytest_tmp_refresh_status_full -p no:cacheprovider` passed with 59 tests.
+- Current SQLite refresh status check returned CDE 552 rows last seen `2026-06-23 12:36 UTC`, EMA 2046 rows last seen `2026-06-23 23:42 UTC`, FDA 2788 rows last seen `2026-06-18 07:30 UTC`, and ICH 44 rows last seen `2026-06-22 16:06 UTC`.
