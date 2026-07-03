@@ -318,3 +318,27 @@ Validation:
 - Targeted test: `python -m pytest tests\test_streamlit_app.py -q --basetemp data\pytest_tmp_refresh_status -p no:cacheprovider` passed with 3 tests.
 - Full test suite: `python -m pytest tests -q --basetemp data\pytest_tmp_refresh_status_full -p no:cacheprovider` passed with 59 tests.
 - Current SQLite refresh status check returned CDE 552 rows last seen `2026-06-23 12:36 UTC`, EMA 2046 rows last seen `2026-06-23 23:42 UTC`, FDA 2788 rows last seen `2026-06-18 07:30 UTC`, and ICH 44 rows last seen `2026-06-22 16:06 UTC`.
+
+## 2026-07-03 - Guidance database refresh milestone
+
+Status: implemented
+
+Summary:
+- Refreshed the SQLite guidance database from official sources using full-list crawl/upsert rather than incremental-only scraping.
+- Updated FDA, CDE, ICH, and EMA records to the 2026-07-03 run.
+- Retried EMA separately after the first all-agency run received a transient non-JSON response from the EMA JSON endpoint.
+- Removed one stale EMA record (`International agreements`) after confirming it was absent from the current official EMA JSON feed.
+- Updated `data_snapshots/regulatory_guidance_snapshot.db` so hosted deployments start from the refreshed data.
+- Regenerated `data/exports/regulatory_guidance.csv` and `data/exports/regulatory_update_report.md`.
+
+Validation:
+- Current runtime SQLite and deployment snapshot both contain 5434 records: CDE 552, EMA 2047, FDA 2791, ICH 44.
+- Future-date check found 0 records with `published_date` after 2026-07-03.
+- Current refresh status: CDE `2026-07-03 08:00 UTC`, EMA `2026-07-03 08:17 UTC`, FDA `2026-07-03 08:00 UTC`, ICH `2026-07-03 08:00 UTC`.
+- Document-link coverage after refresh: CDE 548/552, EMA 1675/2047, FDA 2237/2791, ICH 41/44.
+- Pytest: `python -m pytest tests -q --basetemp data\pytest_tmp_update_20260703 -p no:cacheprovider` passed with 59 tests.
+- Unittest baseline: `python -m unittest discover -s tests -v` passed with 19 tests.
+
+Notes:
+- FDA detail-summary enrichment produced many `401 Unauthorized` warnings for detail pages, but FDA table/list records were imported and upserted successfully.
+- EMA detail-page PDF enrichment produced a small number of timeout, connection-reset, and one 404 warning; the official EMA JSON import completed successfully.
