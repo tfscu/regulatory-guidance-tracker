@@ -8,6 +8,7 @@ ALLOWED_STATUSES = {
     "final",
     "open_for_comment",
     "implemented",
+    "effective",
     "withdrawn",
     "superseded",
     "unknown",
@@ -41,7 +42,9 @@ def normalize_status(
             return "open_for_comment", None
         if "draft" in text:
             return "draft", None
-        if "final" in text or "adopted" in text or "scientific guideline" in text:
+        if "adopted" in text:
+            return "effective", None
+        if "final" in text or "scientific guideline" in text:
             return "final", None
 
     if agency_key == "ICH":
