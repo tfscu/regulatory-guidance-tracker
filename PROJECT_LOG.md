@@ -343,6 +343,20 @@ Notes:
 - FDA detail-summary enrichment produced many `401 Unauthorized` warnings for detail pages, but FDA table/list records were imported and upserted successfully.
 - EMA detail-page PDF enrichment produced a small number of timeout, connection-reset, and one 404 warning; the official EMA JSON import completed successfully.
 
+## 2026-07-08 - EMA current-version status enrichment milestone
+
+Status: implemented
+
+Summary:
+- Added EMA detail-page status enrichment from the `Current version` document metadata block.
+- Mapped EMA `Adopted` current-version status to normalized `effective`, while leaving pages without a current-version status as `unknown`.
+- Refreshed EMA records in the runtime SQLite database and synchronized `data_snapshots/regulatory_guidance_snapshot.db`.
+
+Validation:
+- The user-provided budesonide product-specific bioequivalence guidance page now has `status_raw` `Adopted` and `status_normalized` `effective`.
+- EMA status counts after refresh: `effective` 187, `final` 668, `draft` 55, `open_for_comment` 10, `unknown` 1124, `superseded` 2, `withdrawn` 1.
+- Targeted tests: `python -m pytest tests\test_ema_crawler.py tests\test_status_normalizer.py -q --basetemp data\pytest_tmp_ema_status -p no:cacheprovider` passed with 20 tests.
+
 ## 2026-07-03 - README local run guide milestone
 
 Status: implemented

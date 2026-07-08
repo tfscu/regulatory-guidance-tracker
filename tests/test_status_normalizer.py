@@ -22,6 +22,12 @@ def test_ema_open_consultation_maps_to_open_for_comment():
     assert status == "open_for_comment"
 
 
+def test_ema_adopted_maps_to_effective():
+    status, _ = normalize_status("Product-specific bioequivalence guidance", "Adopted", "EMA")
+
+    assert status == "effective"
+
+
 def test_ich_step_rules():
     assert normalize_status("ICH E20", "Step 2b public consultation", "ICH")[0] == "open_for_comment"
     assert normalize_status("ICH E20", "Step 3", "ICH")[0] == "draft"

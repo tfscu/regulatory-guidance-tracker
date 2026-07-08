@@ -4,6 +4,7 @@ from app.crawlers.ema import (
     EMACrawler,
     _parse_ema_date,
     enrich_ema_documents_with_pdf_links,
+    extract_ema_current_version_status_from_html,
     extract_ema_pdf_url_from_html,
     parse_ema_guidance_payload,
     parse_ema_guidance_search_count,
@@ -151,6 +152,63 @@ def test_extract_ema_pdf_url_from_html_returns_document_pdf():
         extract_ema_pdf_url_from_html(html)
         == "https://www.ema.europa.eu/en/documents/scientific-guideline/example-guideline_en.pdf"
     )
+
+
+def test_extract_ema_current_version_status_ignores_document_history():
+    html = """
+    <main>
+      <div class="paragraph paragraph--type--ema-documents">
+        <h2>Current version</h2>
+        <div class="file-metadata">
+          <small class="file-metadata-row"><span class="value">Adopted</span></small>
+          <small class="file-metadata-row">
+            <span class="label">Reference Number:</span><span class="value">EMA/CHMP/219393/2024</span>
+          </small>
+        </div>
+      </div>
+      <div class="paragraph paragraph--type--ema-documents">
+        <h2>Document history</h2>
+        <div class="file-metadata">
+          <small class="file-metadata-row"><span class="value">Draft: consultation closed</span></small>
+        </div>
+      </div>
+    </main>
+    """
+
+    assert extract_ema_current_version_status_from_html(html) == "Adopted"
+
+
+def test_enrich_ema_documents_with_pdf_links_updates_current_version_status():
+    documents = parse_ema_guidance_payload(
+        {
+            "meta": {"total_records": 1},
+            "data": [
+                {
+                    "title": "Budesonide product-specific bioequivalence guidance",
+                    "summary": "EMA page summary.",
+                    "categories": "Human",
+                    "first_published_date": "12/02/2025",
+                    "last_updated_date": "",
+                    "general_url": "https://www.ema.europa.eu/en/example",
+                }
+            ],
+        }
+    )
+    html = """
+    <main>
+      <div class="paragraph paragraph--type--ema-documents">
+        <h2>Current version</h2>
+        <div class="file-metadata">
+          <small class="file-metadata-row"><span class="value">Adopted</span></small>
+        </div>
+      </div>
+    </main>
+    """
+
+    enriched = enrich_ema_documents_with_pdf_links(documents, lambda url: html)
+
+    assert enriched[0].status_raw == "Adopted"
+    assert enriched[0].status_normalized == "effective"
 
 
 def test_enrich_ema_documents_with_pdf_links_sets_document_url():

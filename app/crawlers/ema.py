@@ -180,13 +180,49 @@ def _enrich_ema_document_with_pdf_link(document: GuidanceDocument, fetch_detail_
     if not document.source_page_url:
         return document
     try:
-        pdf_url = extract_ema_pdf_url_from_html(fetch_detail_html(document.source_page_url))
+        html = fetch_detail_html(document.source_page_url)
+        status_raw = extract_ema_current_version_status_from_html(html)
+        if status_raw:
+            status, sub_status = normalize_status(document.title, status_raw, "EMA", document.comment_end_date)
+            document.status_raw = status_raw
+            document.status_normalized = status
+            document.sub_status = sub_status
+
+        pdf_url = extract_ema_pdf_url_from_html(html)
         if pdf_url:
             document.document_url = pdf_url
             document.document_format = "PDF"
     except httpx.HTTPError as exc:
         logger.warning("EMA PDF link fetch failed for %s: %s", document.source_page_url, exc)
     return document
+
+
+def extract_ema_current_version_status_from_html(html: str) -> str | None:
+    soup = BeautifulSoup(html, "html.parser")
+    current_version = _current_version_section(soup)
+    if current_version is None:
+        return None
+
+    metadata = current_version.select_one(".file-metadata")
+    if metadata is None:
+        return None
+
+    for row in metadata.select(".file-metadata-row"):
+        if row.select_one(".label"):
+            continue
+        value = row.select_one(".value")
+        status = _clean_text(value.get_text(" ", strip=True) if value else row.get_text(" ", strip=True))
+        if status:
+            return status
+    return None
+
+
+def _current_version_section(soup: BeautifulSoup):
+    for section in soup.select(".paragraph--type--ema-documents"):
+        heading = section.find(["h2", "h3"])
+        if heading and _clean_text(heading.get_text(" ", strip=True)).lower() == "current version":
+            return section
+    return None
 
 
 def extract_ema_pdf_url_from_html(html: str, base_url: str = EMA_BASE_URL) -> str | None:
