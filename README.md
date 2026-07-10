@@ -1,6 +1,6 @@
 # Regulatory Guidance Tracker
 
-A local Streamlit web app for browsing regulatory guidance records from FDA, EMA, ICH, and CDE.
+A local Streamlit web app for browsing regulatory guidance records from FDA, EMA, ICH, CDE, and PMDA.
 
 The app uses SQLite for storage and ships with a public database snapshot, so a new user can clone or download this repository and run the dashboard locally without crawling websites first.
 
@@ -9,7 +9,7 @@ The app uses SQLite for storage and ships with a public database snapshot, so a 
 - Streamlit dashboard with agency, status, topic, keyword, title, and date filters
 - SQLite database model for guidance metadata
 - Current public database snapshot at `data_snapshots/regulatory_guidance_snapshot.db`
-- Optional crawler/update workflow for FDA, EMA, ICH, and CDE
+- Optional crawler/update workflow for FDA, EMA, ICH, CDE, and PMDA
 - CSV and Markdown exports under `data/exports/`
 
 Current snapshot contents:
@@ -20,7 +20,8 @@ Current snapshot contents:
 | EMA | 2047 |
 | CDE | 552 |
 | ICH | 44 |
-| Total | 5434 |
+| PMDA | 14 |
+| Total | 5448 |
 
 ## Requirements
 
@@ -105,7 +106,7 @@ powershell -ExecutionPolicy Bypass -File scripts\update_guidance_database.ps1 -A
 Supported values are:
 
 ```text
-all, FDA, EMA, ICH, CDE
+all, FDA, EMA, ICH, CDE, PMDA
 ```
 
 To preview the steps without changing files:
@@ -132,6 +133,7 @@ The app shows a `Data refresh status` table so users can see when each agency wa
 - EMA: official JSON data file documented by EMA
 - ICH: official ICH API used by the ICH website
 - CDE: official CDE guidance database filters for chemical drugs and biological products
+- PMDA: official English clinical-trial and vaccine regulatory-information pages
 
 EMA source used by this project:
 
@@ -238,4 +240,4 @@ tests/                       Pytest and unittest coverage
 
 - The committed snapshot contains public regulatory guidance metadata only.
 - The runtime `data/` directory can contain local databases, backups, exports, and logs. Keep it local.
-- PMDA is not included in the current automated update workflow.
+- PMDA coverage currently includes the official English Clinical Trials page and the Clinical Studies, Prototype Vaccines, and SARS-CoV-2 evaluation sections of the Vaccines and Blood Products page.

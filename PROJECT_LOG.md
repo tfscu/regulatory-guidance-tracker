@@ -368,3 +368,26 @@ Summary:
 
 Validation:
 - Confirmed the README references the current committed snapshot path, update script, Streamlit entry point, and current refreshed snapshot counts.
+
+## 2026-07-10 - PMDA clinical and vaccine guidance milestone
+
+Status: implemented
+
+Summary:
+- Replaced the PMDA placeholder with a real crawler for PMDA's official English regulatory-information pages.
+- Added all four documents from the PMDA Clinical Trials regulations and notifications section.
+- Added ten vaccine documents from Clinical Studies, Prototype Vaccines, and SARS-CoV-2 evaluation sections.
+- Captured official publication dates, section metadata, PDF links, reference numbers, and Early Consideration sub-status values.
+- Removed the PMDA demo seed record and added PMDA to the portable database update script.
+- Updated the Streamlit agency caption and synchronized the committed SQLite snapshot.
+
+Validation:
+- Live PMDA crawl returned 14 unique records: 4 drug clinical-trial records and 10 vaccine records.
+- All 14 records have publication dates and unique PDF URLs; no PMDA seed/demo records are present.
+- All 14 PDF URLs returned HTTP 200 with `application/pdf` content type.
+- Runtime SQLite and deployment snapshot contain 5,448 records: CDE 552, EMA 2,047, FDA 2,791, ICH 44, and PMDA 14.
+- Full pytest suite passed with 67 tests; the existing unittest baseline passed with 19 tests.
+- Streamlit AppTest loaded the page without exceptions and confirmed the visible agency caption includes PMDA.
+
+Notes:
+- PMDA scope is intentionally limited to the agreed clinical-trial and vaccine sections; nonclinical vaccine guidance, blood products, administrative strain-change procedures, and review reports are excluded.

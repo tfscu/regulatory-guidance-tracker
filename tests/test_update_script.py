@@ -14,3 +14,4 @@ def test_update_script_is_portable_and_runs_core_steps():
     assert '"export-csv"' in text
     assert '"generate-report"' in text
     assert "Start-Transcript" in text
+    assert '"PMDA"' in text

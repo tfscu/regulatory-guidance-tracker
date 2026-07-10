@@ -35,9 +35,15 @@ sources:
     base_url: "https://www.cde.org.cn/"
     enabled: true
     strategy: "html"
-  pmda_regulatory_info:
+  pmda_clinical_trials:
     agency: PMDA
     jurisdiction: Japan
-    base_url: "https://www.pmda.go.jp/english/review-services/regulatory-info/0002.html"
+    base_url: "https://www.pmda.go.jp/english/review-services/regulatory-info/0016.html"
+    enabled: true
+    strategy: "html"
+  pmda_vaccines:
+    agency: PMDA
+    jurisdiction: Japan
+    base_url: "https://www.pmda.go.jp/english/review-services/regulatory-info/0018.html"
     enabled: true
     strategy: "html"

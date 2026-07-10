@@ -34,6 +34,8 @@ Update one agency:
 powershell -ExecutionPolicy Bypass -File scripts\update_guidance_database.ps1 -Agency EMA
 ```
 
+Supported agency values are `FDA`, `EMA`, `ICH`, `CDE`, and `PMDA`.
+
 Use a specific Python executable:
 
 ```powershell

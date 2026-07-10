@@ -83,16 +83,6 @@ SEED_ROWS = [
         "source_page_url": "https://www.cde.org.cn/",
     },
     {
-        "title": "Points to Consider for Clinical Trials Using External Controls",
-        "agency": "PMDA",
-        "jurisdiction": "Japan",
-        "status_raw": "Regulatory information guidance",
-        "published_date": "2024-04-12",
-        "topic_raw": "Clinical Trials",
-        "summary": "[Seed/demo data] PMDA external control guidance example.",
-        "source_page_url": "https://www.pmda.go.jp/english/review-services/regulatory-info/0002.html",
-    },
-    {
         "title": "Pediatric Development of Vaccines",
         "agency": "FDA",
         "jurisdiction": "US",
@@ -154,4 +144,3 @@ def seed_documents(agencies: set[str] | None = None) -> list[GuidanceDocument]:
             )
         )
     return documents
-

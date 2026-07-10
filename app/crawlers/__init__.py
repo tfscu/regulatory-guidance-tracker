@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from app.crawlers.base import BaseCrawler, PlaceholderCrawler
+from app.crawlers.base import BaseCrawler
 from app.crawlers.cde import CDECrawler
 from app.crawlers.ema import EMACrawler
 from app.crawlers.fda import FDACrawler
 from app.crawlers.ich import ICHCrawler
+from app.crawlers.pmda import PMDACrawler
 
 
 def crawler_for_agency(agency: str) -> BaseCrawler:
@@ -18,7 +19,7 @@ def crawler_for_agency(agency: str) -> BaseCrawler:
     if agency_key == "CDE":
         return CDECrawler()
     if agency_key == "PMDA":
-        return PlaceholderCrawler("PMDA", "Japan")
+        return PMDACrawler()
     raise ValueError(f"Unsupported agency: {agency}")
 
 

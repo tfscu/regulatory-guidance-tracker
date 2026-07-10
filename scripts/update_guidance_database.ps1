@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("all", "FDA", "EMA", "ICH", "CDE")]
+    [ValidateSet("all", "FDA", "EMA", "ICH", "CDE", "PMDA")]
     [string]$Agency = "all",
 
     [string]$Python = "python",
