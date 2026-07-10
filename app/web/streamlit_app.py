@@ -18,8 +18,23 @@ from app.storage.repository import GuidanceRepository
 
 st.set_page_config(page_title="Regulatory Guidance Tracker", layout="wide")
 
+SELECTED_EXPORT_COLUMNS = [
+    "title",
+    "agency",
+    "jurisdiction",
+    "status_normalized",
+    "published_date",
+    "updated_date",
+    "comment_end_date",
+    "topic_normalized",
+    "summary",
+    "source_page_url",
+    "document_url",
+]
+
 
 def main() -> None:
+    _apply_styles()
     st.title("Regulatory Guidance Tracker")
     st.caption("ICH, FDA, EMA, CDE, PMDA")
 
@@ -33,8 +48,8 @@ def main() -> None:
     filtered = _sidebar_filters(df).reset_index(drop=True)
     _metrics(filtered)
     _refresh_status(df)
-    selected_row = _table(filtered)
-    _detail_view(filtered, selected_row)
+    selected_rows = _table(filtered)
+    _detail_view(filtered, selected_rows[0] if selected_rows else 0)
 
 
 def _load_dataframe(repo: GuidanceRepository) -> pd.DataFrame:
@@ -69,11 +84,19 @@ def _sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     if agency:
         filtered = filtered[filtered["agency"].isin(agency)]
 
-    status = st.sidebar.multiselect("Status", sorted(df["status_normalized"].dropna().unique()))
+    status = st.sidebar.multiselect(
+        "Status",
+        sorted(df["status_normalized"].dropna().unique()),
+        format_func=_humanize_label,
+    )
     if status:
         filtered = filtered[filtered["status_normalized"].isin(status)]
 
-    topic = st.sidebar.multiselect("Topic", sorted(df["topic_normalized"].dropna().unique()))
+    topic = st.sidebar.multiselect(
+        "Topic",
+        sorted(df["topic_normalized"].dropna().unique()),
+        format_func=_humanize_label,
+    )
     if topic:
         filtered = filtered[filtered["topic_normalized"].isin(topic)]
 
@@ -118,28 +141,52 @@ def _date_bounds(df: pd.DataFrame) -> tuple[date | None, date | None]:
 
 
 def _metrics(df: pd.DataFrame) -> None:
-    total, final, draft, open_comment = st.columns(4)
+    metrics = st.container(key="metrics")
+    total, final, draft, open_comment = metrics.columns(4)
     total.metric("Total documents", len(df))
     final.metric("Final documents", int((df["status_normalized"] == "final").sum()))
     draft.metric("Draft documents", int((df["status_normalized"] == "draft").sum()))
     open_comment.metric("Open for comment", int((df["status_normalized"] == "open_for_comment").sum()))
 
 
+def _apply_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .block-container {
+            max-width: 1200px;
+            padding-top: 3rem;
+        }
+        @media (max-width: 640px) {
+            .block-container {
+                padding-top: 2rem;
+            }
+            h1 {
+                font-size: 2rem !important;
+                line-height: 1.15 !important;
+            }
+            .st-key-metrics [data-testid="stHorizontalBlock"] {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.75rem 1rem;
+            }
+            .st-key-metrics [data-testid="column"] {
+                width: auto !important;
+                min-width: 0 !important;
+                flex: none !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _refresh_status(df: pd.DataFrame) -> None:
     status = _refresh_status_table(df)
     if status.empty:
         return
-    st.caption("Data refresh status")
-    st.dataframe(
-        status,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Agency": st.column_config.TextColumn("Agency"),
-            "Records": st.column_config.NumberColumn("Records"),
-            "Last crawled (UTC)": st.column_config.TextColumn("Last crawled (UTC)"),
-        },
-    )
+    st.caption(_refresh_status_text(status))
 
 
 def _refresh_status_table(df: pd.DataFrame) -> pd.DataFrame:
@@ -160,6 +207,14 @@ def _refresh_status_table(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values("Agency").reset_index(drop=True)
 
 
+def _refresh_status_text(status: pd.DataFrame) -> str:
+    items = [
+        f"{row['Agency']} {row['Last crawled (UTC)']}"
+        for row in status.to_dict("records")
+    ]
+    return "Last crawled by agency: " + " | ".join(items)
+
+
 def _parse_datetime(value: object) -> datetime | None:
     if isinstance(value, datetime):
         return value
@@ -178,8 +233,11 @@ def _format_refresh_time(value: datetime | None) -> str:
     return value.strftime("%Y-%m-%d %H:%M UTC")
 
 
-def _table(df: pd.DataFrame) -> int:
+def _table(df: pd.DataFrame) -> list[int]:
     st.subheader("Guidance documents")
+    toolbar = st.container(horizontal=True, vertical_alignment="center", gap="small")
+    export_slot = toolbar.empty()
+    selection_slot = toolbar.empty()
     table_df = df.assign(
         status_display=df["status_normalized"].map(_humanize_label),
         topic_display=df["topic_normalized"].map(_humanize_label),
@@ -189,33 +247,68 @@ def _table(df: pd.DataFrame) -> int:
         "agency",
         "status_display",
         "published_date",
-        "updated_date",
         "topic_display",
         "source_page_url",
         "document_url",
     ]
     event = st.dataframe(
         table_df[columns],
-        use_container_width=True,
+        width="stretch",
+        height=600,
+        row_height=44,
         hide_index=True,
         key="guidance_documents_table",
         on_select="rerun",
         selection_mode="multi-row",
         column_config={
-            "title": st.column_config.TextColumn("Title"),
-            "agency": st.column_config.TextColumn("Agency"),
-            "status_display": st.column_config.TextColumn("Status"),
-            "published_date": st.column_config.DateColumn("Published date"),
-            "updated_date": st.column_config.DateColumn("Updated date"),
-            "topic_display": st.column_config.TextColumn("Topic"),
-            "source_page_url": st.column_config.LinkColumn("Source page"),
-            "document_url": st.column_config.LinkColumn("PDF"),
+            "title": st.column_config.TextColumn("Title", width=320, pinned=True),
+            "agency": st.column_config.TextColumn("Agency", width=65),
+            "status_display": st.column_config.TextColumn("Status", width=115),
+            "published_date": st.column_config.DateColumn("Published", width=105),
+            "topic_display": st.column_config.TextColumn("Topic", width=135),
+            "source_page_url": st.column_config.LinkColumn(
+                "Source",
+                width=60,
+                display_text=":material/open_in_new:",
+                help="Open the official source page",
+            ),
+            "document_url": st.column_config.LinkColumn(
+                "PDF",
+                width=60,
+                display_text=":material/picture_as_pdf:",
+                help="Open the guidance document",
+            ),
         },
     )
-    selected_rows = getattr(getattr(event, "selection", None), "rows", [])
-    if selected_rows:
-        return int(selected_rows[0])
-    return 0
+    selected_rows = _selected_row_indices(
+        getattr(getattr(event, "selection", None), "rows", []),
+        len(df),
+    )
+    selected_export = _selected_export_dataframe(df, selected_rows)
+    export_slot.download_button(
+        "Export selected CSV",
+        data=selected_export.to_csv(index=False).encode("utf-8-sig"),
+        file_name="selected_regulatory_guidance.csv",
+        mime="text/csv",
+        icon=":material/download:",
+        disabled=selected_export.empty,
+        on_click="ignore",
+    )
+    selection_slot.caption(f"{len(selected_rows)} selected")
+    return selected_rows
+
+
+def _selected_row_indices(rows: object, row_count: int) -> list[int]:
+    if not isinstance(rows, (list, tuple)):
+        return []
+    return [index for value in rows if isinstance(value, int) and 0 <= (index := int(value)) < row_count]
+
+
+def _selected_export_dataframe(df: pd.DataFrame, selected_rows: list[int]) -> pd.DataFrame:
+    columns = [column for column in SELECTED_EXPORT_COLUMNS if column in df.columns]
+    if not selected_rows:
+        return pd.DataFrame(columns=columns)
+    return df.iloc[selected_rows][columns].reset_index(drop=True)
 
 
 def _detail_view(df: pd.DataFrame, selected_row: int) -> None:
@@ -225,17 +318,30 @@ def _detail_view(df: pd.DataFrame, selected_row: int) -> None:
         return
     row = df.iloc[min(selected_row, len(df) - 1)]
     st.markdown(f"### {row['title']}")
+    st.caption(_detail_metadata(row))
     st.write(_display_value(row["summary"]))
     source_page_url = _clean_url(row["source_page_url"])
     document_url = _clean_url(row["document_url"])
+    actions = st.container(horizontal=True, gap="small")
     if source_page_url:
-        st.link_button("Source page", source_page_url)
+        actions.link_button("Source page", source_page_url, icon=":material/open_in_new:")
     else:
-        st.write("Source page: Not available.")
+        actions.caption("Source page not available")
     if document_url:
-        st.link_button("Document", document_url)
+        actions.link_button("Document", document_url, icon=":material/picture_as_pdf:")
     else:
-        st.write("Document: Not available.")
+        actions.caption("Document not available")
+
+
+def _detail_metadata(row: pd.Series) -> str:
+    published = _display_value(row.get("published_date"))
+    values = [
+        _display_value(row.get("agency")),
+        _humanize_label(row.get("status_normalized")),
+        f"Published {published}",
+        _humanize_label(row.get("topic_normalized")),
+    ]
+    return " | ".join(values)
 
 
 def _display_value(value: object) -> str:

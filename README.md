@@ -7,6 +7,8 @@ The app uses SQLite for storage and ships with a public database snapshot, so a 
 ## What You Get
 
 - Streamlit dashboard with agency, status, topic, keyword, title, and date filters
+- Multi-row selection with CSV export for selected guidance records
+- Compact per-agency crawl timestamps and direct source/PDF links
 - SQLite database model for guidance metadata
 - Current public database snapshot at `data_snapshots/regulatory_guidance_snapshot.db`
 - Optional crawler/update workflow for FDA, EMA, ICH, CDE, and PMDA

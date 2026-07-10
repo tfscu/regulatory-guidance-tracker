@@ -391,3 +391,27 @@ Validation:
 
 Notes:
 - PMDA scope is intentionally limited to the agreed clinical-trial and vaccine sections; nonclinical vaccine guidance, blood products, administrative strain-change procedures, and review reports are excluded.
+
+## 2026-07-10 - Streamlit frontend cleanup milestone
+
+Status: implemented
+
+Summary:
+- Added a consistent light theme with restrained neutral backgrounds and a blue action color.
+- Replaced the refresh-status dataframe with one compact per-agency timestamp line.
+- Removed `Updated date` from the main table and tightened column widths so Source and PDF links remain visible at common desktop widths.
+- Replaced long source and document URLs with familiar open/PDF icons and tooltips.
+- Restored multi-row CSV export with a selected-record count and a disabled empty state.
+- Added concise agency, status, publication date, and topic metadata to Detail view.
+- Kept the existing sidebar filters while displaying readable Status and Topic option labels.
+- Replaced deprecated Streamlit width arguments with the current `width="stretch"` API.
+
+Validation:
+- Targeted Streamlit helper tests cover refresh text, selected-row validation, selected CSV output, and detail metadata.
+- Streamlit AppTest loaded the full page without exceptions and returned one main guidance dataframe.
+- Playwright desktop smoke testing confirmed the Source/PDF columns are visible and selecting a row enables the CSV export button.
+- Playwright mobile smoke testing confirmed a 2-by-2 metric layout, visible guidance table, and no page-level horizontal overflow at 390px.
+- Full pytest suite passed with 69 tests; the existing unittest baseline passed with 19 tests.
+
+Notes:
+- The implementation stays on native Streamlit components; no custom iframe or HTML table was introduced.
